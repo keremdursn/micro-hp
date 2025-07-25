@@ -1,0 +1,18 @@
+server:
+  port: "8081"
+
+database:
+  host: "postgres"
+  port: "5432"
+  user: "user"
+  password: "password"
+  dbname: "auth_db"
+  sslmode: "disable"
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+
+jwt:
+  secret: "your_super_secret_key"
