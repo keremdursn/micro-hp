@@ -7,7 +7,6 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofiber/adaptor/v2 v2.2.1
 	github.com/gofiber/fiber/v2 v2.52.9
-	github.com/keremdursn/hospital-case v0.0.0-20250729170210-d5f822d065f3
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/viper v1.20.1
 	gorm.io/driver/postgres v1.6.0
