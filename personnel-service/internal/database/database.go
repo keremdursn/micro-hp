@@ -1,54 +1,83 @@
 package database
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"time"
+
+	"personnel-service/internal/config"
 
 	"github.com/go-redis/redis/v8"
-	"personnel-service/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
-var RDB *redis.Client
+type Database struct {
+	SQL   *gorm.DB
+	Redis *redis.Client
+}
 
-func Connect(config *config.Config) {
-	var err error
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		config.Database.Host,
-		config.Database.User,
-		config.Database.Password,
-		config.Database.DBName,
-		config.Database.Port,
-		config.Database.SSLMode)
-
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+func NewDatabase(cfg *config.Config) (*Database, error) {
+	db, err := connectPostgres(cfg)
 	if err != nil {
-		log.Fatal("Failed to connect to database: ", err)
+		return nil, fmt.Errorf("failed to connect to Postgres: %w", err)
 	}
 
-	fmt.Println("Database connection successfully opened")
-}
-
-func GetDB() *gorm.DB {
-	if DB == nil {
-		log.Fatal("Database connection is not initialized")
+	rdb, err := connectRedis(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
-	return DB
+
+	return &Database{
+		SQL:   db,
+		Redis: rdb,
+	}, nil
 }
 
-func ConnectRedis(config *config.Config) {
-	RDB = redis.NewClient(&redis.Options{
-		Addr:     config.Redis.Addr,
-		Password: config.Redis.Password,
-		DB:       config.Redis.DB,
+func connectPostgres(cfg *config.Config) (*gorm.DB, error) {
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		cfg.Database.Host,
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.DBName,
+		cfg.Database.Port,
+		cfg.Database.SSLMode)
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	// Connection pool ayarları
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(25)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("ping failed: %w", err)
+	}
+
+	return db, nil
+}
+
+func connectRedis(cfg *config.Config) (*redis.Client, error) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
 	})
 
-	_, err := RDB.Ping(RDB.Context()).Result()
-	if err != nil {
-		log.Fatal("Failed to connect to Redis: ", err)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if _, err := rdb.Ping(ctx).Result(); err != nil {
+		return nil, err
 	}
 
-	fmt.Println("Redis connection successfully opened")
+	return rdb, nil
 }

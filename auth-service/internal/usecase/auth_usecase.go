@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"auth-service/internal/config"
-	"auth-service/internal/database"
 	"auth-service/internal/dto"
 	"auth-service/internal/models"
 	"auth-service/internal/repository"
 	"auth-service/pkg/utils"
 	dt "hospital-shared/dto"
-	utilss "hospital-shared/util"
 
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 )
 
@@ -29,10 +28,14 @@ type AuthUsecase interface {
 
 type authUsecase struct {
 	authRepo repository.AuthRepository
+	redis    *redis.Client
 }
 
-func NewAuthUsecase(r repository.AuthRepository) AuthUsecase {
-	return &authUsecase{authRepo: r}
+func NewAuthUsecase(r repository.AuthRepository, redis *redis.Client) AuthUsecase {
+	return &authUsecase{
+		authRepo: r,
+		redis:    redis,
+	}
 }
 
 func (u *authUsecase) Register(req *dto.RegisterRequest) (*models.Authority, error) {
@@ -97,13 +100,16 @@ func (u *authUsecase) Login(req *dto.LoginRequest, cfg *config.Config) (*dto.Log
 	}
 
 	// Token üret
-	secret := cfg.JWT.Secret
-	token, err := utilss.GenerateToken(authority.ID, authority.HospitalID, authority.Role, secret)
+	tokenPair, err := utils.GenerateTokenPair(authority.ID, authority.HospitalID, authority.Role, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return &dto.LoginResponse{Token: token}, nil
+	return &dto.LoginResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresIn:    tokenPair.ExpiresIn,
+	}, nil
 }
 
 func (u *authUsecase) ForgotPassword(req *dto.ForgotPasswordRequest) (*dto.ForgotPasswordResponse, error) {
@@ -118,7 +124,7 @@ func (u *authUsecase) ForgotPassword(req *dto.ForgotPasswordRequest) (*dto.Forgo
 	code := utils.GenerateResetCode()
 
 	ctx := context.Background()
-	if err := database.RDB.Set(ctx, "reset_code:"+req.Phone, code, 5*time.Minute).Err(); err != nil {
+	if err := u.redis.Set(ctx, "reset_code:"+req.Phone, code, 5*time.Minute).Err(); err != nil {
 		return nil, err
 	}
 
@@ -131,7 +137,7 @@ func (u *authUsecase) ResetPassword(req *dto.ResetPasswordRequest) error {
 	}
 
 	ctx := context.Background()
-	storedCode, err := database.RDB.Get(ctx, "reset_code:"+req.Phone).Result()
+	storedCode, err := u.redis.Get(ctx, "reset_code:"+req.Phone).Result()
 	if err != nil || storedCode != req.Code {
 		return errors.New("invalid or expired code")
 	}
@@ -150,6 +156,6 @@ func (u *authUsecase) ResetPassword(req *dto.ResetPasswordRequest) error {
 		return err
 	}
 
-	_ = database.RDB.Del(ctx, "reset_code:"+req.Phone).Err()
+	_ = u.redis.Del(ctx, "reset_code:"+req.Phone).Err()
 	return nil
 }

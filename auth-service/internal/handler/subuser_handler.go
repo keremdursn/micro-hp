@@ -3,20 +3,23 @@ package handler
 import (
 	"strconv"
 
+	"auth-service/internal/config"
 	"auth-service/internal/dto"
 	"auth-service/internal/usecase"
-	utilss "hospital-shared/util"
+	"auth-service/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type SubUserHandler struct {
-	usecase usecase.SubUserUsecase
+	subUserUsecase usecase.SubUserUsecase
+	config         *config.Config
 }
 
-func NewSubUserHandler(usecase usecase.SubUserUsecase) *SubUserHandler {
+func NewSubUserHandler(subUserUsecase usecase.SubUserUsecase, cfg *config.Config) *SubUserHandler {
 	return &SubUserHandler{
-		usecase: usecase,
+		subUserUsecase: subUserUsecase,
+		config:         cfg,
 	}
 }
 
@@ -36,12 +39,12 @@ func (h *SubUserHandler) CreateSubUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.CreateSubUser(req, user.HospitalID)
+	resp, err := h.subUserUsecase.CreateSubUser(req, user.HospitalID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -57,13 +60,13 @@ func (h *SubUserHandler) CreateSubUser(c *fiber.Ctx) error {
 // @Success     200 {array} dto.SubUserResponse
 // @Failure     400 {object} map[string]string
 // @Router      /api/subuser [get]
-func (h *SubUserHandler) ListSubUsers(c *fiber.Ctx) error {
-	user := utilss.GetUserInfo(c)
+func (h *SubUserHandler) ListUsers(c *fiber.Ctx) error {
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.ListSubUsers(user.HospitalID)
+	resp, err := h.subUserUsecase.ListSubUsers(user.HospitalID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -92,12 +95,12 @@ func (h *SubUserHandler) UpdateSubUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.UpdateSubUser(uint(id), req, user.HospitalID)
+	resp, err := h.subUserUsecase.UpdateSubUser(uint(id), req, user.HospitalID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -120,12 +123,12 @@ func (h *SubUserHandler) DeleteSubUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	if err := h.usecase.DeleteSubUser(uint(id), user.HospitalID); err != nil {
+	if err := h.subUserUsecase.DeleteSubUser(uint(id), user.HospitalID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 

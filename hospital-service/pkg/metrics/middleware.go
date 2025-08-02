@@ -19,3 +19,4 @@ func PrometheusMiddleware() fiber.Handler {
 		return err
 	}
 }
+

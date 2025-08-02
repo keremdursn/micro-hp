@@ -22,3 +22,15 @@ type HospitalResponse struct {
 	DistrictID   uint   `json:"district_id"`
 	DistrictName string `json:"district_name"`
 }
+
+type PolyclinicPersonnelGroup struct {
+	GroupName string `json:"groupName"`
+	Count     int    `json:"count"`
+}
+
+type HospitalPolyclinicResponseDTO struct {
+	ID           uint   `json:"id"`
+	HospitalID   uint   `json:"hospital_id"`
+	PolyclinicID uint   `json:"polyclinic_id"`
+	PolyclinicName   string `json:"polyclinic_name"`
+}

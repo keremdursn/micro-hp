@@ -3,20 +3,23 @@ package handler
 import (
 	"strconv"
 
-	utilss "hospital-shared/util"
+	"personnel-service/internal/config"
 	"personnel-service/internal/dto"
 	"personnel-service/internal/usecase"
+	"personnel-service/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type PersonnelHandler struct {
-	usecase usecase.PersonnelUsecase
+	personnelUsecase usecase.PersonnelUsecase
+	config           *config.Config
 }
 
-func NewPersonnelHandler(usecase usecase.PersonnelUsecase) *PersonnelHandler {
+func NewPersonnelHandler(personnelUsecase usecase.PersonnelUsecase, cfg *config.Config) *PersonnelHandler {
 	return &PersonnelHandler{
-		usecase: usecase,
+		personnelUsecase: personnelUsecase,
+		config:           cfg,
 	}
 }
 
@@ -28,7 +31,7 @@ func NewPersonnelHandler(usecase usecase.PersonnelUsecase) *PersonnelHandler {
 // @Success     201 {array} dto.JobGroupLookup
 // @Router      /api/personnel/job-groups [get]
 func (h *PersonnelHandler) ListAllJobGroups(c *fiber.Ctx) error {
-	resp, err := h.usecase.ListAllJobGroups()
+	resp, err := h.personnelUsecase.ListAllJobGroups()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -52,7 +55,7 @@ func (h *PersonnelHandler) ListTitleByJobGroup(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid job_group_id"})
 	}
 
-	resp, err := h.usecase.ListTitleByJobGroup(uint(jobGroupID))
+	resp, err := h.personnelUsecase.ListTitleByJobGroup(uint(jobGroupID))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -76,12 +79,12 @@ func (h *PersonnelHandler) AddStaff(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.AddStaff(&req, user.HospitalID)
+	resp, err := h.personnelUsecase.AddStaff(&req, user.HospitalID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -110,12 +113,12 @@ func (h *PersonnelHandler) UpdateStaff(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.UpdateStaff(uint(id), req, user.HospitalID)
+	resp, err := h.personnelUsecase.UpdateStaff(uint(id), req, user.HospitalID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -137,12 +140,12 @@ func (h *PersonnelHandler) DeleteStaff(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid staff id"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	if err := h.usecase.DeleteStaff(uint(id), user.HospitalID); err != nil {
+	if err := h.personnelUsecase.DeleteStaff(uint(id), user.HospitalID); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Staff deleted"})
@@ -188,12 +191,12 @@ func (h *PersonnelHandler) ListStaff(c *fiber.Ctx) error {
 		}
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.ListStaff(user.HospitalID, dto.StaffListFilter{
+	resp, err := h.personnelUsecase.ListStaff(user.HospitalID, dto.StaffListFilter{
 		FirstName:  firstName,
 		LastName:   lastName,
 		TC:         tc,
@@ -205,4 +208,32 @@ func (h *PersonnelHandler) ListStaff(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(resp)
+}
+
+func (h *PersonnelHandler) GetStaffCount(c *fiber.Ctx) error {
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(400).SendString("Invalid ID")
+	}
+
+	count, err := h.personnelUsecase.CountPersonnelByHpID(uint(id))
+	if err != nil {
+		return c.Status(500).SendString("Error fetching count")
+	}
+
+	return c.JSON(fiber.Map{"count": count})
+}
+
+func (h *PersonnelHandler) GetGroupCounts(c *fiber.Ctx) error {
+	id, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(400).SendString("Invalid ID")
+	}
+
+	groupCounts, err := h.personnelUsecase.GetGroupCountsByHpID(uint(id))
+	if err != nil {
+		return c.Status(500).SendString("Error fetching group counts")
+	}
+
+	return c.JSON(groupCounts) // [{groupName: "Doktor", count: 3}, ...]
 }

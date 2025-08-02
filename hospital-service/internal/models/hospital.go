@@ -13,7 +13,5 @@ type Hospital struct {
 	City        City
 	DistrictID  uint `gorm:"not null"`
 	District    District
-	Authorities []Authority          `gorm:"foreignKey:HospitalID"`
 	Polyclinics []HospitalPolyclinic `gorm:"foreignKey:HospitalID"`
-	Staff       []Staff              `gorm:"foreignKey:HospitalID"`
 }

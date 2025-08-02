@@ -3,12 +3,16 @@ package handler
 import (
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	"auth-service/internal/config"
 	"auth-service/internal/dto"
 	"auth-service/internal/usecase"
 	"auth-service/pkg/metrics"
-	
+	"auth-service/pkg/utils"
+
+	"auth-service/pkg/middleware"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
 type AuthHandler struct {
@@ -16,9 +20,10 @@ type AuthHandler struct {
 	config      *config.Config
 }
 
-func NewAuthHandler(authUsecase usecase.AuthUsecase) *AuthHandler {
+func NewAuthHandler(authUsecase usecase.AuthUsecase, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{
 		authUsecase: authUsecase,
+		config:      cfg,
 	}
 }
 
@@ -36,17 +41,61 @@ func NewAuthHandler(authUsecase usecase.AuthUsecase) *AuthHandler {
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req dto.RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
+		metrics.RegisterFailCounter.Inc()
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Cannot parse request",
 		})
 	}
 
+	// Validation yap
+	if err := middleware.ValidateStruct(&req); err != nil {
+		metrics.RegisterFailCounter.Inc()
+		var errors []string
+		for _, validationErr := range err.(validator.ValidationErrors) {
+			field := validationErr.Field()
+			tag := validationErr.Tag()
+			param := validationErr.Param()
+
+			var message string
+			switch tag {
+			case "required":
+				message = field + " is required"
+			case "email":
+				message = field + " must be a valid email"
+			case "min":
+				message = field + " must be at least " + param + " characters"
+			case "max":
+				message = field + " must be at most " + param + " characters"
+			case "len":
+				message = field + " must be exactly " + param + " characters"
+			case "gt":
+				message = field + " must be greater than " + param
+			case "tc":
+				message = field + " must be a valid TC identity number"
+			case "phone":
+				message = field + " must be a valid phone number"
+			case "password":
+				message = field + " must contain uppercase, lowercase and digit"
+			default:
+				message = field + " is invalid"
+			}
+			errors = append(errors, message)
+		}
+
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Validation failed",
+			"details": errors,
+		})
+	}
+
 	authority, err := h.authUsecase.Register(&req)
 	if err != nil {
+		metrics.RegisterFailCounter.Inc()
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
+	metrics.RegisterSuccessCounter.Inc()
 
 	var deletedAt *time.Time
 	if authority.DeletedAt.Valid {
@@ -96,6 +145,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 			"error": err.Error(),
 		})
 	}
+	metrics.LoginSuccessCounter.Inc()
 
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
@@ -113,13 +163,16 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 func (h *AuthHandler) ForgotPassword(c *fiber.Ctx) error {
 	var req dto.ForgotPasswordRequest
 	if err := c.BodyParser(&req); err != nil {
+		metrics.ForgotPasswordFailCounter.Inc()
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
 	resp, err := h.authUsecase.ForgotPassword(&req)
 	if err != nil {
+		metrics.ForgotPasswordFailCounter.Inc()
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
+	metrics.ForgotPasswordSuccessCounter.Inc()
 
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
@@ -137,12 +190,59 @@ func (h *AuthHandler) ForgotPassword(c *fiber.Ctx) error {
 func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 	var req dto.ResetPasswordRequest
 	if err := c.BodyParser(&req); err != nil {
+		metrics.ResetPasswordFailCounter.Inc()
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
 	if err := h.authUsecase.ResetPassword(&req); err != nil {
+		metrics.ResetPasswordFailCounter.Inc()
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
+	metrics.ResetPasswordSuccessCounter.Inc()
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Password reset successful"})
+}
+
+// RefreshToken godoc
+// @Summary     JWT yenileme
+// @Description Geçerli bir refresh token ile yeni access ve refresh token döner
+// @Tags        Authentication
+// @Accept      json
+// @Produce     json
+// @Param       refreshToken body dto.RefreshTokenRequest true "Refresh token bilgisi"
+// @Success     200 {object} dto.RefreshTokenResponse
+// @Failure     400 {object} map[string]string
+// @Failure     401 {object} map[string]string
+// @Router      /api/auth/refresh-token [post]
+func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
+	var req dto.RefreshTokenRequest
+
+	if err := c.BodyParser(&req); err != nil {
+		metrics.RefreshTokenFailCounter.Inc()
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Cannot parse JSON",
+		})
+	}
+
+	if req.RefreshToken == "" {
+		metrics.RefreshTokenFailCounter.Inc()
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Refresh token is required",
+		})
+	}
+
+	tokenPair, err := utils.RefreshAccessToken(req.RefreshToken, h.config)
+	if err != nil {
+		metrics.RefreshTokenFailCounter.Inc()
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid refresh token",
+		})
+	}
+	metrics.RefreshTokenSuccessCounter.Inc()
+
+	return c.JSON(dto.RefreshTokenResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		ExpiresIn:    tokenPair.ExpiresIn,
+	})
 }

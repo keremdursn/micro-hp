@@ -4,8 +4,10 @@ import (
 	"errors"
 
 	"hospital-service/internal/dto"
+	"hospital-service/internal/infrastructure/client"
 	"hospital-service/internal/models"
 	"hospital-service/internal/repository"
+	dt "hospital-shared/dto"
 )
 
 type PolyclinicUsecase interface {
@@ -13,14 +15,20 @@ type PolyclinicUsecase interface {
 	AddPolyclinicToHospital(req *dto.AddHospitalPolyclinicRequest, hospitalID uint) (*dto.HospitalPolyclinicResponse, error)
 	ListHospitalPolyclinic(hospitalID uint, page, size int) (*dto.HospitalPolyclinicListResponse, error)
 	RemoveHospitalPolyclinic(id uint, hospitalID uint) error
+
+	GetHospitalPolyclinic(id uint) (*dt.HospitalPolyclinicResponseDTO, error)
 }
 
 type polyclinicUsecase struct {
-	repo repository.PolyclinicRepository
+	repo            repository.PolyclinicRepository
+	personnelClient client.PersonnelClient
 }
 
-func NewPolyclinicUsecase(repo repository.PolyclinicRepository) PolyclinicUsecase {
-	return &polyclinicUsecase{repo: repo}
+func NewPolyclinicUsecase(r repository.PolyclinicRepository, pc client.PersonnelClient) PolyclinicUsecase {
+	return &polyclinicUsecase{
+		repo:            r,
+		personnelClient: pc,
+	}
 }
 
 func (u *polyclinicUsecase) ListAllPolyclinics() ([]dto.PolyclinicLookup, error) {
@@ -96,14 +104,15 @@ func (u *polyclinicUsecase) ListHospitalPolyclinic(hospitalID uint, page, size i
 			return nil, err
 		}
 
-		totalPersonnel, err := u.repo.CountPersonnel(hp.ID)
+		totalPersonnel, err := u.personnelClient.GetPersonnelCount(hp.ID)
 		if err != nil {
-			return nil, err
+			// Hata yönetimi → istersen logla ve sıfır dön
+			totalPersonnel = 0
 		}
 
-		groupCounts, err := u.repo.GetPersonnelGroupCounts(hp.ID)
+		groupCounts, err := u.personnelClient.GetPersonnelGroups(hp.ID)
 		if err != nil {
-			return nil, err
+			groupCounts = []dt.PolyclinicPersonnelGroup{}
 		}
 
 		personnelGroups := make([]dto.PolyclinicPersonnelGroup, 0, len(groupCounts))
@@ -142,4 +151,23 @@ func (u *polyclinicUsecase) RemoveHospitalPolyclinic(id uint, hospitalID uint) e
 	}
 	return u.repo.Delete(hp)
 
+}
+
+func (u *polyclinicUsecase) GetHospitalPolyclinic(id uint) (*dt.HospitalPolyclinicResponseDTO, error) {
+	hp, err := u.repo.GetHospitalPolyclinicByID(uint(id))
+	if err != nil {
+		return nil, err
+	}
+
+	poly, err := u.repo.GetPolyclinicByID(hp.PolyclinicID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dt.HospitalPolyclinicResponseDTO{
+		ID:             hp.ID,
+		HospitalID:     hp.HospitalID,
+		PolyclinicID:   hp.PolyclinicID,
+		PolyclinicName: poly.Name,
+	}, nil
 }

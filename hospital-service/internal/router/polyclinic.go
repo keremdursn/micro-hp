@@ -1,28 +1,30 @@
 package router
 
 import (
-	"hospital-service/internal/database"
 	"hospital-service/internal/handler"
+	"hospital-service/internal/infrastructure/client"
 	"hospital-service/internal/repository"
 	"hospital-service/internal/usecase"
-	utilss "hospital-shared/util"
-
-	"github.com/gofiber/fiber/v2"
+	"hospital-service/pkg/middleware"
+	"hospital-service/pkg/utils"
 )
 
-func PolyclinicRoutes(app *fiber.App, secret string) {
-	db := database.GetDB()
-	polyclinicRepo := repository.NewPolyclinicRepository(db)
-	polyclinicUsecase := usecase.NewPolyclinicUsecase(polyclinicRepo)
-	polyclinicHandler := handler.NewPolyclinicHandler(polyclinicUsecase)
+func PolyclinicRoutes(deps RouterDeps) {
 
-	api := app.Group("/api")
+	polyclinicRepo := repository.NewPolyclinicRepository(deps.DB.SQL)
+	personnelClient := client.NewPersonnelClient(deps.Config.Url.BaseUrl)
+	polyclinicUsecase := usecase.NewPolyclinicUsecase(polyclinicRepo, personnelClient)
+	polyclinicHandler := handler.NewPolyclinicHandler(polyclinicUsecase, deps.Config)
+
+	api := deps.App.Group("/api")
 
 	polyclinicGroup := api.Group("/polyclinic")
 
-	//
-	polyclinicGroup.Get("/", utilss.AuthRequired(secret), utilss.RequireRole("yetkili", "calisan"), polyclinicHandler.ListAllPolyclinics)
-	polyclinicGroup.Post("/hospital-polyclinics", utilss.AuthRequired(secret), utilss.RequireRole("yetkili"), polyclinicHandler.AddHospitalPolyclinic)
-	polyclinicGroup.Get("/hospital-polyclinics", utilss.AuthRequired(secret), utilss.RequireRole("yetkili", "calisan"), polyclinicHandler.ListHospitalPolyclinic)
-	polyclinicGroup.Delete("/hospital-polyclinics/:id", utilss.AuthRequired(secret), utilss.RequireRole("yetkili"), polyclinicHandler.RemoveHospitalPolyclinic)
+	polyclinicGroup.Get("/", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), polyclinicHandler.ListAllPolyclinics)
+	polyclinicGroup.Post("/hospital-polyclinics", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), polyclinicHandler.AddHospitalPolyclinic)
+	polyclinicGroup.Get("/hospital-polyclinics", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), polyclinicHandler.ListHospitalPolyclinic)
+	polyclinicGroup.Delete("/hospital-polyclinics/:id", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), polyclinicHandler.RemoveHospitalPolyclinic)
+
+	//Personnel servisi bu endpointe http isteği atıyor
+	polyclinicGroup.Get("/hospital-polyclinics/:id", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), polyclinicHandler.GetHospitalPolyclinic)
 }

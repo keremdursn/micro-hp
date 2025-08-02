@@ -1,0 +1,5 @@
+auth dışındaki servislerin
+    prometheus grafana metricleri yapılmadı onları yap
+    redislerini kontrol et hepsinin
+
+jwt ve ortak dosya düzenlemesi yap

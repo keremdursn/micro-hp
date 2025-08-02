@@ -1,22 +1,22 @@
 package router
 
 import (
-	"github.com/gofiber/fiber/v2"
-	"hospital-service/internal/usecase"
 	"hospital-service/internal/handler"
 	"hospital-service/internal/repository"
+	"hospital-service/internal/usecase"
+	"hospital-service/pkg/middleware"
 )
 
-func LocationRoutes(app *fiber.App) {
+func LocationRoutes(deps RouterDeps) {
 
-	locationRepo := repository.NewLocationRepository()
-	locationUsecase := usecase.NewLocationUsecase(locationRepo)
+	locationRepo := repository.NewLocationRepository(deps.DB.SQL)
+	locationUsecase := usecase.NewLocationUsecase(locationRepo, deps.DB.Redis)
 	locationHandler := handler.NewLocationHandler(locationUsecase)
 
-	api := app.Group("/api")
+	api := deps.App.Group("/api")
 
 	locationGroup := api.Group("/location")
 
-	locationGroup.Get("/cities", locationHandler.ListCities)
-	locationGroup.Get("/districts", locationHandler.ListDistrictsByCity)
+	locationGroup.Get("/cities", middleware.GeneralRateLimiter(), locationHandler.ListCities)
+	locationGroup.Get("/districts", middleware.GeneralRateLimiter(), locationHandler.ListDistrictsByCity)
 }

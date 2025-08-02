@@ -1,30 +1,35 @@
 package router
 
 import (
-	utilss "hospital-shared/util"
-	"personnel-service/internal/database"
 	"personnel-service/internal/handler"
 	"personnel-service/internal/repository"
 	"personnel-service/internal/usecase"
+	"personnel-service/pkg/utils"
+	"personnel-service/internal/infrastructure/client"
 
-	"github.com/gofiber/fiber/v2"
+	"personnel-service/pkg/middleware"
 )
 
-func PersonnelRoutes(app *fiber.App, secret string) {
-	db := database.GetDB()
-	personnelRepo := repository.NewPersonnelRepository(db)
-	personnelUsecase := usecase.NewPersonnelUsecase(personnelRepo)
-	personnelHandler := handler.NewPersonnelHandler(personnelUsecase)
+func PersonnelRoutes(deps RouterDeps) {
+	personnelRepo := repository.NewPersonnelRepository(deps.DB.SQL)
+	polyclinicClient := client.NewPolyclinicClient(deps.Config.Url.BaseUrl)
+	personnelUsecase := usecase.NewPersonnelUsecase(personnelRepo, deps.DB.Redis, polyclinicClient)
+	personnelHandler := handler.NewPersonnelHandler(personnelUsecase, deps.Config)
 
-	api := app.Group("/api")
+	api := deps.App.Group("/api")
 
 	personnelGroup := api.Group("/personnel")
 
-	personnelGroup.Get("/job-groups", utilss.AuthRequired(secret), utilss.RequireRole("yetkili", "calisan"), personnelHandler.ListAllJobGroups)
-	personnelGroup.Get("/titles/:job_group_id", utilss.AuthRequired(secret), utilss.RequireRole("yetkili", "calisan"), personnelHandler.ListTitleByJobGroup)
+	personnelGroup.Get("/job-groups", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.ListAllJobGroups)
+	personnelGroup.Get("/titles/:job_group_id", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.ListTitleByJobGroup)
 
-	personnelGroup.Post("/staff", utilss.AuthRequired(secret), utilss.RequireRole("yetkili"), personnelHandler.AddStaff)
-	personnelGroup.Put("/staff/:id", utilss.AuthRequired(secret), utilss.RequireRole("yetkili"), personnelHandler.UpdateStaff)
-	personnelGroup.Delete("/staff/:id", utilss.AuthRequired(secret), utilss.RequireRole("yetkili"), personnelHandler.DeleteStaff)
-	personnelGroup.Get("/staff", utilss.AuthRequired(secret), utilss.RequireRole("yetkili", "calisan"), personnelHandler.ListStaff)
+	personnelGroup.Post("/staff", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), personnelHandler.AddStaff)
+	personnelGroup.Put("/staff/:id", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), personnelHandler.UpdateStaff)
+	personnelGroup.Delete("/staff/:id", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), personnelHandler.DeleteStaff)
+	personnelGroup.Get("/staff", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.ListStaff)
+
+	//Hospital servisi bu endpointlere http istekleri atıyor
+	personnelGroup.Get("/:id", utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.GetStaffCount)
+	personnelGroup.Get("/groups/:id", utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.GetGroupCounts)
+
 }

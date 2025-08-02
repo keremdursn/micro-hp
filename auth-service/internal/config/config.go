@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/spf13/viper"
 )
 
@@ -31,7 +33,10 @@ type RedisConfig struct {
 }
 
 type JWTConfig struct {
-	Secret string `mapstructure:"secret"`
+	PrivateKey         string `mapstructure:"private_key"`
+	PublicKey          string `mapstructure:"public_key"`
+	AccessTokenExpiry  string `mapstructure:"access_token_expiry"`
+	RefreshTokenExpiry string `mapstructure:"refresh_token_expiry"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
@@ -41,11 +46,13 @@ func LoadConfig(path string) (config Config, err error) {
 
 	viper.AutomaticEnv()
 
-	err = viper.ReadInConfig()
-	if err != nil {
-		return
+	if err := viper.ReadInConfig(); err != nil {
+		return config, fmt.Errorf("error reading config file: %w", err)
 	}
 
-	err = viper.Unmarshal(&config)
-	return
+	if err := viper.Unmarshal(&config); err != nil {
+		return config, fmt.Errorf("error unmarshalling config: %w", err)
+	}
+
+	return config, nil
 }

@@ -3,22 +3,24 @@ package handler
 import (
 	"strconv"
 
+	"hospital-service/internal/config"
 	"hospital-service/internal/dto"
 	"hospital-service/internal/usecase"
 
+	"hospital-service/pkg/utils"
+
 	"github.com/gofiber/fiber/v2"
-	utilss "hospital-shared/util"
 )
 
 type PolyclinicHandler struct {
-	usecase usecase.PolyclinicUsecase
-
+	polyclinicUsecase usecase.PolyclinicUsecase
+	config            *config.Config
 }
 
-func NewPolyclinicHandler(usecase usecase.PolyclinicUsecase) *PolyclinicHandler {
+func NewPolyclinicHandler(polyclinicUsecase usecase.PolyclinicUsecase, cfg *config.Config) *PolyclinicHandler {
 	return &PolyclinicHandler{
-		usecase: usecase,
-
+		polyclinicUsecase: polyclinicUsecase,
+		config:            cfg,
 	}
 }
 
@@ -30,7 +32,7 @@ func NewPolyclinicHandler(usecase usecase.PolyclinicUsecase) *PolyclinicHandler 
 // @Success     200 {array} dto.PolyclinicLookup
 // @Router      /api/polyclinic/all [get]
 func (h *PolyclinicHandler) ListAllPolyclinics(c *fiber.Ctx) error {
-	resp, err := h.usecase.ListAllPolyclinics()
+	resp, err := h.polyclinicUsecase.ListAllPolyclinics()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -54,12 +56,12 @@ func (h *PolyclinicHandler) AddHospitalPolyclinic(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.AddPolyclinicToHospital(req, user.HospitalID)
+	resp, err := h.polyclinicUsecase.AddPolyclinicToHospital(req, user.HospitalID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -81,12 +83,12 @@ func (h *PolyclinicHandler) ListHospitalPolyclinic(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	size, _ := strconv.Atoi(c.Query("size", "10"))
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.ListHospitalPolyclinic(user.HospitalID, page, size)
+	resp, err := h.polyclinicUsecase.ListHospitalPolyclinic(user.HospitalID, page, size)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -109,15 +111,29 @@ func (h *PolyclinicHandler) RemoveHospitalPolyclinic(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid id"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	err = h.usecase.RemoveHospitalPolyclinic(uint(id), user.HospitalID)
+	err = h.polyclinicUsecase.RemoveHospitalPolyclinic(uint(id), user.HospitalID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Polyclinic removed from hospital"})
+}
+
+func (h *PolyclinicHandler) GetHospitalPolyclinic(c *fiber.Ctx) error {
+	hpID, err := strconv.ParseUint(c.Params("id"), 10, 64)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid ID"})
+	}
+
+	hp, err := h.polyclinicUsecase.GetHospitalPolyclinic(uint(hpID))
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "not found"})
+	}
+
+	return c.JSON(hp)
 }

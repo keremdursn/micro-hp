@@ -1,21 +1,24 @@
 package handler
 
 import (
+	"hospital-service/internal/config"
 	"hospital-service/internal/dto"
 	"hospital-service/internal/usecase"
 	dt "hospital-shared/dto"
-	utilss "hospital-shared/util"
+	"hospital-service/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type HospitalHandler struct {
-	usecase usecase.HospitalUsecase
+	hospitalUsecase usecase.HospitalUsecase
+	config          *config.Config
 }
 
-func NewHospitalHandler(usecase usecase.HospitalUsecase) *HospitalHandler {
+func NewHospitalHandler(hospitalUsecase usecase.HospitalUsecase, cfg *config.Config) *HospitalHandler {
 	return &HospitalHandler{
-		usecase: usecase,
+		hospitalUsecase: hospitalUsecase,
+		config:          cfg,
 	}
 }
 
@@ -29,11 +32,11 @@ func NewHospitalHandler(usecase usecase.HospitalUsecase) *HospitalHandler {
 // @Failure     404 {object} map[string]string
 // @Router      /api/hospital/me [get]
 func (h *HospitalHandler) GetHospitalMe(c *fiber.Ctx) error {
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
-	resp, err := h.usecase.GetHospitalByID(user.HospitalID)
+	resp, err := h.hospitalUsecase.GetHospitalByID(user.HospitalID)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -46,12 +49,12 @@ func (h *HospitalHandler) CreateHospital(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
 
-	resp, err := h.usecase.CreateHospital(&req)
+	resp, err := h.hospitalUsecase.CreateHospital(&req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -70,7 +73,7 @@ func (h *HospitalHandler) CreateHospital(c *fiber.Ctx) error {
 // @Failure     401 {object} map[string]string
 // @Router      /api/hospital/me [put]
 func (h *HospitalHandler) UpdateHospitalMe(c *fiber.Ctx) error {
-	user := utilss.GetUserInfo(c)
+	user := utils.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -78,7 +81,7 @@ func (h *HospitalHandler) UpdateHospitalMe(c *fiber.Ctx) error {
 	if err := c.BodyParser(req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
-	resp, err := h.usecase.UpdateHospital(user.HospitalID, req)
+	resp, err := h.hospitalUsecase.UpdateHospital(user.HospitalID, req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}

@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 
-	"personnel-service/internal/database"
+	dt "hospital-shared/dto"
 	"personnel-service/internal/dto"
+	"personnel-service/internal/infrastructure/client"
 	"personnel-service/internal/models"
 	"personnel-service/internal/repository"
+
+	"github.com/go-redis/redis/v8"
 )
 
 type PersonnelUsecase interface {
@@ -19,14 +22,23 @@ type PersonnelUsecase interface {
 	UpdateStaff(id uint, req *dto.UpdateStaffRequest, hospitalID uint) (*dto.StaffResponse, error)
 	DeleteStaff(id, hospitalID uint) error
 	ListStaff(hospitalID uint, filter dto.StaffListFilter, page, size int) (*dto.StaffListResponse, error)
+
+	CountPersonnelByHpID(hpID uint) (int64, error)
+	GetGroupCountsByHpID(hpID uint) ([]dt.PolyclinicPersonnelGroup, error)
 }
 
 type personnelUsecase struct {
-	repo repository.PersonnelRepository
+	repo             repository.PersonnelRepository
+	redis            *redis.Client
+	polyclinicClient client.PolyclinicClient
 }
 
-func NewPersonnelUsecase(repo repository.PersonnelRepository) PersonnelUsecase {
-	return &personnelUsecase{repo: repo}
+func NewPersonnelUsecase(repo repository.PersonnelRepository, redis *redis.Client, pc client.PolyclinicClient) PersonnelUsecase {
+	return &personnelUsecase{
+		repo:             repo,
+		redis:            redis,
+		polyclinicClient: pc,
+	}
 }
 
 func (u *personnelUsecase) ListAllJobGroups() ([]dto.JobGroupLookup, error) {
@@ -34,7 +46,7 @@ func (u *personnelUsecase) ListAllJobGroups() ([]dto.JobGroupLookup, error) {
 	cacheKey := "job_groups"
 
 	// Önce Redis'te var mı bak
-	cached, err := database.RDB.Get(ctx, cacheKey).Result()
+	cached, err := u.redis.Get(ctx, cacheKey).Result()
 	if err == nil && cached != "" {
 		var resp []dto.JobGroupLookup
 		if err := json.Unmarshal([]byte(cached), &resp); err == nil {
@@ -58,9 +70,8 @@ func (u *personnelUsecase) ListAllJobGroups() ([]dto.JobGroupLookup, error) {
 
 	// 3. Redis'e yaz
 	if data, err := json.Marshal(resp); err == nil {
-		_ = database.RDB.Set(ctx, cacheKey, data, 0).Err() // Hata olursa cache'siz devam et
+		_ = u.redis.Set(ctx, cacheKey, data, 0).Err() // Hata olursa cache'siz devam et
 	}
-
 	return resp, nil
 }
 
@@ -69,7 +80,7 @@ func (u *personnelUsecase) ListTitleByJobGroup(jobGroupID uint) ([]dto.TitleLook
 	cacheKey := "titles_by_jobgroup_" + string(rune(jobGroupID))
 
 	// Önce Redis'te var mı bak
-	cached, err := database.RDB.Get(ctx, cacheKey).Result()
+	cached, err := u.redis.Get(ctx, cacheKey).Result()
 	if err == nil && cached != "" {
 		var resp []dto.TitleLookup
 		if err := json.Unmarshal([]byte(cached), &resp); err == nil {
@@ -77,6 +88,7 @@ func (u *personnelUsecase) ListTitleByJobGroup(jobGroupID uint) ([]dto.TitleLook
 		}
 	}
 
+	// Yoksa DB'den çek
 	titles, err := u.repo.GetAllTitlesByJobGroup(jobGroupID)
 	if err != nil {
 		return nil, err
@@ -92,9 +104,8 @@ func (u *personnelUsecase) ListTitleByJobGroup(jobGroupID uint) ([]dto.TitleLook
 
 	// Redis'e yaz
 	if data, err := json.Marshal(resp); err == nil {
-		_ = database.RDB.Set(ctx, cacheKey, data, 0).Err()
+		_ = u.redis.Set(ctx, cacheKey, data, 0).Err()
 	}
-
 	return resp, nil
 }
 
@@ -137,15 +148,14 @@ func (u *personnelUsecase) AddStaff(req *dto.AddStaffRequest, hospitalID uint) (
 	// Poliklinik kontrolü
 	var polyName *string
 	if req.HospitalPolyclinicID != nil {
-		hp, err := u.repo.GetHospitalPolyclinicByID(*req.HospitalPolyclinicID)
+		hp, err := u.polyclinicClient.GetHospitalPolyclinicByID(*req.HospitalPolyclinicID)
 		if err != nil {
 			return nil, errors.New("hospital polyclinic not found")
 		}
 		if hp.HospitalID != hospitalID {
 			return nil, errors.New("polyclinic does not belong to your hospital")
 		}
-		p, _ := u.repo.GetPolyclinicByID(hp.PolyclinicID)
-		polyName = &p.Name
+		polyName = &hp.PolyclinicName
 	}
 
 	staff := models.Staff{
@@ -224,15 +234,14 @@ func (u *personnelUsecase) UpdateStaff(id uint, req *dto.UpdateStaffRequest, hos
 
 	var polyName *string
 	if req.HospitalPolyclinicID != nil {
-		hp, err := u.repo.GetHospitalPolyclinicByID(*req.HospitalPolyclinicID)
+		hp, err := u.polyclinicClient.GetHospitalPolyclinicByID(*req.HospitalPolyclinicID)
 		if err != nil {
 			return nil, errors.New("hospital polyclinic not found")
 		}
 		if hp.HospitalID != hospitalID {
 			return nil, errors.New("polyclinic does not belong to your hospital")
 		}
-		p, _ := u.repo.GetPolyclinicByID(hp.PolyclinicID)
-		polyName = &p.Name
+		polyName = &hp.PolyclinicName
 	}
 
 	staff.FirstName = req.FirstName
@@ -305,12 +314,11 @@ func (u *personnelUsecase) ListStaff(hospitalID uint, filter dto.StaffListFilter
 		// Eğer poliklinik ID varsa, poliklinik adını al
 		var polyName *string
 		if s.HospitalPolyclinicID != nil {
-			hp, err := u.repo.GetHospitalPolyclinicByID(*s.HospitalPolyclinicID)
+			hp, err := u.polyclinicClient.GetHospitalPolyclinicByID(*s.HospitalPolyclinicID)
 			if err != nil {
 				return nil, err
 			}
-			p, _ := u.repo.GetPolyclinicByID(hp.PolyclinicID)
-			polyName = &p.Name
+			polyName = &hp.PolyclinicName
 		}
 
 		resp = append(resp, dto.StaffResponse{
@@ -335,4 +343,12 @@ func (u *personnelUsecase) ListStaff(hospitalID uint, filter dto.StaffListFilter
 		Page:  page,
 		Size:  size,
 	}, nil
+}
+
+func (u *personnelUsecase) CountPersonnelByHpID(hpID uint) (int64, error) {
+	return u.repo.CountPersonnel(hpID)
+}
+
+func (u *personnelUsecase) GetGroupCountsByHpID(hpID uint) ([]dt.PolyclinicPersonnelGroup, error) {
+	return u.repo.GetGroupCountsByHospitalPolyclinicID(hpID)
 }

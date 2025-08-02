@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"personnel-service/internal/database"
+	dt "hospital-shared/dto"
 	"personnel-service/internal/dto"
 	"personnel-service/internal/models"
+
 	"gorm.io/gorm"
 )
 
@@ -15,8 +16,6 @@ type PersonnelRepository interface {
 	GetJobGroupByID(id uint) (*models.JobGroup, error)
 	GetTitleByID(id uint) (*models.Title, error)
 	CountHospitalHeads(hospitalID uint) (int64, error)
-	GetHospitalPolyclinicByID(id uint) (*models.HospitalPolyclinic, error)
-	GetPolyclinicByID(id uint) (*models.Polyclinic, error)
 	CreateStaff(staff *models.Staff) error
 
 	GetStaffByID(id uint) (*models.Staff, error)
@@ -26,6 +25,9 @@ type PersonnelRepository interface {
 
 	ListStaffWithFilter(hospitalID uint, filter dto.StaffListFilter, page, size int) ([]models.Staff, error)
 	CountStaffWithFilter(hospitalID uint, filter dto.StaffListFilter) (int64, error)
+
+	CountPersonnel(hospitalPolyclinicID uint) (int64, error)
+	GetGroupCountsByHospitalPolyclinicID(hpID uint) ([]dt.PolyclinicPersonnelGroup, error)
 }
 
 type personnelRepository struct {
@@ -76,27 +78,11 @@ func (r *personnelRepository) GetTitleByID(id uint) (*models.Title, error) {
 
 func (r *personnelRepository) CountHospitalHeads(hospitalID uint) (int64, error) {
 	var count int64
-	err := database.DB.Table("staffs").
+	err := r.db.Table("staffs").
 		Joins("JOIN titles ON staffs.title_id = titles.id").
 		Where("titles.name = ? AND staffs.hospital_id = ?", "Başhekim", hospitalID).
 		Count(&count).Error
 	return count, err
-}
-
-func (r *personnelRepository) GetHospitalPolyclinicByID(id uint) (*models.HospitalPolyclinic, error) {
-	var hp models.HospitalPolyclinic
-	if err := r.db.First(&hp, id).Error; err != nil {
-		return nil, err
-	}
-	return &hp, nil
-}
-
-func (r *personnelRepository) GetPolyclinicByID(id uint) (*models.Polyclinic, error) {
-	var p models.Polyclinic
-	if err := r.db.First(&p, id).Error; err != nil {
-		return nil, err
-	}
-	return &p, nil
 }
 
 func (r *personnelRepository) CreateStaff(staff *models.Staff) error {
@@ -180,4 +166,28 @@ func (r *personnelRepository) CountStaffWithFilter(hospitalID uint, filter dto.S
 	var totalCount int64
 	err := query.Count(&totalCount).Error
 	return totalCount, err
+}
+
+// Toplam personel sayısı
+func (r *personnelRepository) CountPersonnel(hospitalPolyclinicID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.Staff{}).
+		Where("hospital_polyclinic_id = ?", hospitalPolyclinicID).
+		Count(&count).Error
+
+	return count, err
+}
+
+func (r *personnelRepository) GetGroupCountsByHospitalPolyclinicID(hpID uint) ([]dt.PolyclinicPersonnelGroup, error) {
+
+	var groupCounts []dt.PolyclinicPersonnelGroup
+
+	err := r.db.Table("staffs").
+		Select("job_groups.name as group_name, COUNT(*) as count").
+		Joins("JOIN job_groups ON staffs.job_group_id = job_groups.id").
+		Where("staffs.hospital_polyclinic_id = ?", hpID).
+		Group("job_groups.name").
+		Scan(&groupCounts).Error
+
+	return groupCounts, err
 }

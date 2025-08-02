@@ -24,19 +24,20 @@ var (
 		[]string{"path", "method"},
 	)
 
-	// Login başarısızlıklarını sayan özel metrik
-	LoginFailCounter = prometheus.NewCounter(
+	// Rate limiting metrikleri
+	RateLimitExceededCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "login_fail_total",
-			Help: "Total number of failed login attempts",
+			Name: "rate_limit_exceeded_total",
+			Help: "Total number of rate limit exceeded requests",
 		},
+		[]string{"endpoint", "ip"},
 	)
 )
 
 func init() {
 	prometheus.MustRegister(HttpRequestsTotal)
 	prometheus.MustRegister(HttpRequestDuration)
-	prometheus.MustRegister(LoginFailCounter)
+	prometheus.MustRegister(RateLimitExceededCounter)
 }
 
 // PrometheusHandler Fiber ile uyumlu /metrics endpointi için handler döndürür

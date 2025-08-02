@@ -6,14 +6,13 @@ import (
 
 	"hospital-service/internal/config"
 	"hospital-service/internal/database"
-	"hospital-service/internal/models"
 	"hospital-service/internal/router"
 
 	"github.com/gofiber/fiber/v2"
 
-	_ "auth-service/docs"
+	// _ "auth-service/docs"
 
-	fiberSwagger "github.com/swaggo/fiber-swagger"
+	// fiberSwagger "github.com/swaggo/fiber-swagger"
 
 	"hospital-service/pkg/metrics"
 )
@@ -25,22 +24,15 @@ func main() {
 		log.Fatalf("cannot load config: %v", err)
 	}
 
-	secret := cfg.JWT.Secret
-
 	// Connect to database
-	database.Connect(&cfg)
-	database.ConnectRedis(&cfg)
-
-	err = database.DB.AutoMigrate(
-
-		&models.Hospital{},
-		&models.City{},
-		&models.District{},
-		&models.Polyclinic{},
-		&models.HospitalPolyclinic{},
-	)
+	dbInstance, err := database.NewDatabase(&cfg)
 	if err != nil {
-		log.Fatal("cannot migrate database: ", err)
+		log.Fatalf("cannot connect to database: %v", err)
+	}
+
+	// Migration
+	if err := database.RunMigrations(dbInstance.SQL); err != nil {
+		log.Fatalf("migration failed: %v", err)
 	}
 
 	app := fiber.New()
@@ -48,11 +40,17 @@ func main() {
 	app.Use(metrics.PrometheusMiddleware())
 	app.Get("/metrics", metrics.PrometheusHandler())
 
-	app.Get("/swagger/*", fiberSwagger.WrapHandler)
+	// app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
-	router.HospitalRoutes(app, secret)
-	router.PolyclinicRoutes(app, secret)
-	router.LocationRoutes(app)
+	deps := router.RouterDeps{
+		App:    app,
+		DB:     dbInstance,
+		Config: &cfg,
+	}
+
+	router.HospitalRoutes(deps)
+	router.PolyclinicRoutes(deps)
+	router.LocationRoutes(deps)
 
 	for _, r := range app.GetRoutes() {
 		fmt.Println(r.Method, r.Path)

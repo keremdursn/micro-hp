@@ -1,29 +1,24 @@
 package router
 
 import (
-	"auth-service/internal/database"
 	"auth-service/internal/handler"
 	"auth-service/internal/repository"
 	"auth-service/internal/usecase"
-
-	"github.com/gofiber/fiber/v2"
+	"auth-service/pkg/middleware"
 )
 
-func AuthRoutes(app *fiber.App) {
-	db := database.GetDB()
-	authRepo := repository.NewAuthRepository(db)
-	authUsecase := usecase.NewAuthUsecase(authRepo)
-	authHandler := handler.NewAuthHandler(authUsecase)
+func AuthRoutes(deps RouterDeps) {
+	authRepo := repository.NewAuthRepository(deps.DB.SQL)
+	authUsecase := usecase.NewAuthUsecase(authRepo, deps.DB.Redis)
+	authHandler := handler.NewAuthHandler(authUsecase, deps.Config)
 
-	api := app.Group("/api")
+	api := deps.App.Group("/api")
 
 	authGroup := api.Group("/auth")
 
-	authGroup.Post("/register", authHandler.Register)
-	authGroup.Post("/login", authHandler.Login)
-	authGroup.Post("/forgot-password", authHandler.ForgotPassword)
-	authGroup.Post("/reset-password", authHandler.ResetPassword)
-
-	// Sub-user management (only for 'yetkili')
-	// api.Post("/users", utils.AuthRequired(cfg), utils.RequireRole("yetkili"), authHandler.CreateSubUser)
+	authGroup.Post("/register", middleware.AuthRateLimiter(), authHandler.Register)
+	authGroup.Post("/login", middleware.LoginRateLimiter(), authHandler.Login)
+	authGroup.Post("/forgot-password", middleware.AuthRateLimiter(), authHandler.ForgotPassword)
+	authGroup.Post("/reset-password", middleware.AuthRateLimiter(), authHandler.ResetPassword)
+	authGroup.Post("/refresh-token", middleware.AuthRateLimiter(), authHandler.RefreshToken)
 }
