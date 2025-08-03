@@ -1,0 +1,313 @@
+definitions:
+  dto.AddHospitalPolyclinicRequest:
+    properties:
+      polyclinic_id:
+        type: integer
+    type: object
+  dto.CityLookup:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  dto.DistrictLookup:
+    properties:
+      city_id:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  dto.HospitalPolyclinicDetail:
+    properties:
+      id:
+        type: integer
+      personnel_groups:
+        items:
+          $ref: '#/definitions/dto.PolyclinicPersonnelGroup'
+        type: array
+      polyclinic_name:
+        type: string
+      total_personnel:
+        type: integer
+    type: object
+  dto.HospitalPolyclinicListResponse:
+    properties:
+      page:
+        type: integer
+      polyclinics:
+        items:
+          $ref: '#/definitions/dto.HospitalPolyclinicDetail'
+        type: array
+      size:
+        type: integer
+      total:
+        type: integer
+    type: object
+  dto.HospitalPolyclinicResponse:
+    properties:
+      id:
+        type: integer
+      polyclinic_id:
+        type: integer
+      polyclinic_name:
+        type: string
+    type: object
+  dto.HospitalResponse:
+    properties:
+      address:
+        type: string
+      city_id:
+        type: integer
+      city_name:
+        type: string
+      district_id:
+        type: integer
+      district_name:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      phone:
+        type: string
+      tax_number:
+        type: string
+    type: object
+  dto.PolyclinicLookup:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  dto.PolyclinicPersonnelGroup:
+    properties:
+      count:
+        type: integer
+      group_name:
+        type: string
+    type: object
+  dto.UpdateHospitalRequest:
+    properties:
+      address:
+        type: string
+      city_id:
+        type: integer
+      district_id:
+        type: integer
+      email:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      tax_number:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/cities:
+    get:
+      description: Returns all cities (il)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.CityLookup'
+            type: array
+      summary: Tüm şehirleri listeler
+      tags:
+      - Location
+  /api/districts:
+    get:
+      description: Returns all districts (ilçe) for a given city
+      parameters:
+      - description: City ID
+        in: query
+        name: city_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.DistrictLookup'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Seçili ile ait ilçeleri listeler
+      tags:
+      - Location
+  /api/hospital/me:
+    get:
+      description: Returns the hospital info of the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.HospitalResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Giriş yapan kullanıcının hastane bilgisini getirir
+      tags:
+      - Hospital
+    put:
+      consumes:
+      - application/json
+      description: Updates the hospital info of the authenticated user
+      parameters:
+      - description: Hospital update info
+        in: body
+        name: hospital
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateHospitalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.HospitalResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Giriş yapan kullanıcının hastane bilgisini günceller
+      tags:
+      - Hospital
+  /api/polyclinic/add:
+    post:
+      consumes:
+      - application/json
+      description: Adds a polyclinic to the hospital
+      parameters:
+      - description: Polyclinic info
+        in: body
+        name: polyclinic
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddHospitalPolyclinicRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.HospitalPolyclinicResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Hastaneye poliklinik ekler
+      tags:
+      - Polyclinic
+  /api/polyclinic/all:
+    get:
+      description: Returns all polyclinics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PolyclinicLookup'
+            type: array
+      summary: Tüm poliklinikleri listeler
+      tags:
+      - Polyclinic
+  /api/polyclinic/list:
+    get:
+      description: Lists hospital's polyclinics with pagination
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.HospitalPolyclinicListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Hastanenin polikliniklerini listeler (sayfalı)
+      tags:
+      - Polyclinic
+  /api/polyclinic/remove/{id}:
+    delete:
+      description: Removes a polyclinic from the hospital
+      parameters:
+      - description: Hospital Polyclinic ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Hastaneden poliklinik siler
+      tags:
+      - Polyclinic
+swagger: "2.0"

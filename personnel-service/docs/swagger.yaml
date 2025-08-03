@@ -1,0 +1,273 @@
+definitions:
+  dto.AddStaffRequest:
+    properties:
+      first_name:
+        type: string
+      hospital_polyclinic_id:
+        type: integer
+      job_group_id:
+        type: integer
+      last_name:
+        type: string
+      phone:
+        type: string
+      tc:
+        type: string
+      title_id:
+        type: integer
+      working_days:
+        type: string
+    type: object
+  dto.JobGroupLookup:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  dto.StaffListResponse:
+    properties:
+      page:
+        type: integer
+      size:
+        type: integer
+      staff:
+        items:
+          $ref: '#/definitions/dto.StaffResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  dto.StaffResponse:
+    properties:
+      first_name:
+        type: string
+      hospital_polyclinic_id:
+        type: integer
+      id:
+        type: integer
+      job_group_id:
+        type: integer
+      job_group_name:
+        type: string
+      last_name:
+        type: string
+      phone:
+        type: string
+      polyclinic_name:
+        type: string
+      tc:
+        type: string
+      title_id:
+        type: integer
+      title_name:
+        type: string
+      working_days:
+        type: string
+    type: object
+  dto.TitleLookup:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  dto.UpdateStaffRequest:
+    properties:
+      first_name:
+        type: string
+      hospital_polyclinic_id:
+        type: integer
+      job_group_id:
+        type: integer
+      last_name:
+        type: string
+      phone:
+        type: string
+      tc:
+        type: string
+      title_id:
+        type: integer
+      working_days:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/personnel/job-groups:
+    get:
+      description: Returns all job groups
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/dto.JobGroupLookup'
+            type: array
+      summary: Tüm meslek gruplarını listeler
+      tags:
+      - Personnel
+  /api/personnel/staff:
+    get:
+      description: Lists staff with filters and pagination
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: size
+        type: integer
+      - description: First name
+        in: query
+        name: first_name
+        type: string
+      - description: Last name
+        in: query
+        name: last_name
+        type: string
+      - description: TC Kimlik No
+        in: query
+        name: tc
+        type: string
+      - description: Job Group ID
+        in: query
+        name: job_group_id
+        type: integer
+      - description: Title ID
+        in: query
+        name: title_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.StaffListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Personelleri listeler (filtreli ve sayfalı)
+      tags:
+      - Personnel
+    post:
+      consumes:
+      - application/json
+      description: Adds a new staff member
+      parameters:
+      - description: Staff info
+        in: body
+        name: staff
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AddStaffRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.StaffResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Personel ekler
+      tags:
+      - Personnel
+  /api/personnel/staff/{id}:
+    delete:
+      description: Deletes a staff member
+      parameters:
+      - description: Staff ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Personel siler
+      tags:
+      - Personnel
+    put:
+      consumes:
+      - application/json
+      description: Updates a staff member
+      parameters:
+      - description: Staff ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Staff info
+        in: body
+        name: staff
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateStaffRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.StaffResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Personel günceller
+      tags:
+      - Personnel
+  /api/personnel/titles:
+    get:
+      description: Returns all titles for a given job group
+      parameters:
+      - description: Job Group ID
+        in: query
+        name: job_group_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/dto.TitleLookup'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Seçili meslek grubuna ait unvanları listeler
+      tags:
+      - Personnel
+swagger: "2.0"

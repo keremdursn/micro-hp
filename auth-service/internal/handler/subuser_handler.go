@@ -6,7 +6,7 @@ import (
 	"auth-service/internal/config"
 	"auth-service/internal/dto"
 	"auth-service/internal/usecase"
-	"auth-service/pkg/utils"
+	"hospital-shared/jwt"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -39,7 +39,7 @@ func (h *SubUserHandler) CreateSubUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -61,7 +61,7 @@ func (h *SubUserHandler) CreateSubUser(c *fiber.Ctx) error {
 // @Failure     400 {object} map[string]string
 // @Router      /api/subuser [get]
 func (h *SubUserHandler) ListUsers(c *fiber.Ctx) error {
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -95,7 +95,7 @@ func (h *SubUserHandler) UpdateSubUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -123,7 +123,7 @@ func (h *SubUserHandler) DeleteSubUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid user ID"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}

@@ -7,14 +7,15 @@ import (
 	"personnel-service/internal/config"
 	"personnel-service/internal/database"
 	"personnel-service/internal/router"
+	"personnel-service/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 
-	// _ "personnel-service/docs"
+	_ "personnel-service/docs"
 
-	// fiberSwagger "github.com/swaggo/fiber-swagger"
+	fiberSwagger "github.com/swaggo/fiber-swagger"
 
-	"personnel-service/pkg/metrics"
+	"hospital-shared/metrics"
 )
 
 func main() {
@@ -40,12 +41,13 @@ func main() {
 	app.Use(metrics.PrometheusMiddleware())
 	app.Get("/metrics", metrics.PrometheusHandler())
 
-	// app.Get("/swagger/*", fiberSwagger.WrapHandler)
+	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	deps := router.RouterDeps{
-		App:    app,
-		DB:     dbInstance,
-		Config: &cfg,
+		App:             app,
+		DB:              dbInstance,
+		Config:          &cfg,
+		JWTSharedConfig: utils.MapToSharedJWTConfig(&cfg),
 	}
 
 	router.PersonnelRoutes(deps)

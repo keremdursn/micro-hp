@@ -5,7 +5,7 @@ import (
 	"hospital-service/internal/dto"
 	"hospital-service/internal/usecase"
 	dt "hospital-shared/dto"
-	"hospital-service/pkg/utils"
+	"hospital-shared/jwt"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -32,7 +32,7 @@ func NewHospitalHandler(hospitalUsecase usecase.HospitalUsecase, cfg *config.Con
 // @Failure     404 {object} map[string]string
 // @Router      /api/hospital/me [get]
 func (h *HospitalHandler) GetHospitalMe(c *fiber.Ctx) error {
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -49,7 +49,7 @@ func (h *HospitalHandler) CreateHospital(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -73,7 +73,7 @@ func (h *HospitalHandler) CreateHospital(c *fiber.Ctx) error {
 // @Failure     401 {object} map[string]string
 // @Router      /api/hospital/me [put]
 func (h *HospitalHandler) UpdateHospitalMe(c *fiber.Ctx) error {
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}

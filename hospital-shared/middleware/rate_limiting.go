@@ -3,7 +3,7 @@ package middleware
 import (
 	"time"
 
-	"auth-service/pkg/metrics"
+	"hospital-shared/metrics"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"

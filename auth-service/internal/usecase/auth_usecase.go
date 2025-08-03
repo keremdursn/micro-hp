@@ -1,19 +1,18 @@
 package usecase
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
-	"net/http"
 	"time"
 
 	"auth-service/internal/config"
 	"auth-service/internal/dto"
+	"auth-service/internal/infrastructure/client"
 	"auth-service/internal/models"
 	"auth-service/internal/repository"
 	"auth-service/pkg/utils"
 	dt "hospital-shared/dto"
+	"hospital-shared/jwt"
 
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
@@ -27,14 +26,16 @@ type AuthUsecase interface {
 }
 
 type authUsecase struct {
-	authRepo repository.AuthRepository
-	redis    *redis.Client
+	authRepo       repository.AuthRepository
+	redis          *redis.Client
+	hospitalClient client.HospitalClient
 }
 
-func NewAuthUsecase(r repository.AuthRepository, redis *redis.Client) AuthUsecase {
+func NewAuthUsecase(r repository.AuthRepository, redis *redis.Client, hc client.HospitalClient) AuthUsecase {
 	return &authUsecase{
-		authRepo: r,
-		redis:    redis,
+		authRepo:       r,
+		redis:          redis,
+		hospitalClient: hc,
 	}
 }
 
@@ -49,8 +50,8 @@ func (u *authUsecase) Register(req *dto.RegisterRequest) (*models.Authority, err
 		return nil, errors.New("authority already exists")
 	}
 
-	// Create Hospital
-	hospitalReq := dt.CreateHospitalRequest{
+	// Call hospital service to create hospital
+	hospitalResp, err := u.hospitalClient.CreateHospital(&dt.CreateHospitalRequest{
 		Name:       req.HospitalName,
 		TaxNumber:  req.TaxNumber,
 		Email:      req.HospitalEmail,
@@ -58,14 +59,10 @@ func (u *authUsecase) Register(req *dto.RegisterRequest) (*models.Authority, err
 		Address:    req.Address,
 		CityID:     req.CityID,
 		DistrictID: req.DistrictID,
+	})
+	if err != nil {
+		return nil, err
 	}
-	body, _ := json.Marshal(hospitalReq)
-	resp, err := http.Post("http://hospital-service:8082/api/hospital", "application/json", bytes.NewBuffer(body))
-	if err != nil || resp.StatusCode != http.StatusCreated {
-		// hata yönetimi
-	}
-	var hospitalResp dt.HospitalResponse
-	json.NewDecoder(resp.Body).Decode(&hospitalResp)
 
 	// Create Authority
 	authority := &models.Authority{
@@ -100,7 +97,8 @@ func (u *authUsecase) Login(req *dto.LoginRequest, cfg *config.Config) (*dto.Log
 	}
 
 	// Token üret
-	tokenPair, err := utils.GenerateTokenPair(authority.ID, authority.HospitalID, authority.Role, cfg)
+	jwtCfg := utils.MapToSharedJWTConfig(cfg)
+	tokenPair, err := jwt.GenerateTokenPair(authority.ID, authority.HospitalID, authority.Role, jwtCfg)
 	if err != nil {
 		return nil, err
 	}

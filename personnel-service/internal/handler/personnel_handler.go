@@ -3,10 +3,10 @@ package handler
 import (
 	"strconv"
 
+	"hospital-shared/jwt"
 	"personnel-service/internal/config"
 	"personnel-service/internal/dto"
 	"personnel-service/internal/usecase"
-	"personnel-service/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -79,7 +79,7 @@ func (h *PersonnelHandler) AddStaff(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -113,7 +113,7 @@ func (h *PersonnelHandler) UpdateStaff(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -140,7 +140,7 @@ func (h *PersonnelHandler) DeleteStaff(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid staff id"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -191,7 +191,7 @@ func (h *PersonnelHandler) ListStaff(c *fiber.Ctx) error {
 		}
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}

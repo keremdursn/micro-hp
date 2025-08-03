@@ -1,4 +1,4 @@
-package utils
+package jwt
 
 import (
 	"crypto/rsa"
@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
+	// "auth-service/internal/config"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
-	"auth-service/internal/config"
 )
 
 type UserInfo struct {
@@ -46,8 +47,8 @@ type RefreshTokenClaims struct {
 }
 
 // LoadPrivateKey loads RSA private key from config string
-func LoadPrivateKeyFromConfig(cfg *config.Config) (*rsa.PrivateKey, error) {
-	keyBytes := []byte(cfg.JWT.PrivateKey)
+func LoadPrivateKeyFromConfig(pemStr string) (*rsa.PrivateKey, error) {
+	keyBytes := []byte(pemStr)
 	block, _ := pem.Decode(keyBytes)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode PEM block from config private key")
@@ -60,8 +61,8 @@ func LoadPrivateKeyFromConfig(cfg *config.Config) (*rsa.PrivateKey, error) {
 }
 
 // LoadPublicKey loads RSA public key from config string
-func LoadPublicKeyFromConfig(cfg *config.Config) (*rsa.PublicKey, error) {
-	keyBytes := []byte(cfg.JWT.PublicKey)
+func LoadPublicKeyFromConfig(pemStr string) (*rsa.PublicKey, error) {
+	keyBytes := []byte(pemStr)
 	block, _ := pem.Decode(keyBytes)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode PEM block from config public key")
@@ -78,19 +79,19 @@ func LoadPublicKeyFromConfig(cfg *config.Config) (*rsa.PublicKey, error) {
 }
 
 // GenerateTokenPair creates both access and refresh tokens
-func GenerateTokenPair(authorityID, hospitalID uint, role string, cfg *config.Config) (*TokenPair, error) {
-	privateKey, err := LoadPrivateKeyFromConfig(cfg)
+func GenerateTokenPair(authorityID, hospitalID uint, role string, cfg *JWTConfig) (*TokenPair, error) {
+	privateKey, err := LoadPrivateKeyFromConfig(cfg.PrivateKeyPEM)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load private key: %w", err)
 	}
 
 	// Parse expiry durations
-	accessExpiry, err := time.ParseDuration(cfg.JWT.AccessTokenExpiry)
+	accessExpiry, err := time.ParseDuration(cfg.AccessTokenExpiry)
 	if err != nil {
 		return nil, fmt.Errorf("invalid access token expiry: %w", err)
 	}
 
-	refreshExpiry, err := time.ParseDuration(cfg.JWT.RefreshTokenExpiry)
+	refreshExpiry, err := time.ParseDuration(cfg.RefreshTokenExpiry)
 	if err != nil {
 		return nil, fmt.Errorf("invalid refresh token expiry: %w", err)
 	}
@@ -141,8 +142,8 @@ func GenerateTokenPair(authorityID, hospitalID uint, role string, cfg *config.Co
 }
 
 // ParseAccessToken validates and parses an access token
-func ParseAccessToken(tokenStr string, cfg *config.Config) (*UserInfo, error) {
-	publicKey, err := LoadPublicKeyFromConfig(cfg)
+func ParseAccessToken(tokenStr string, cfg *JWTConfig) (*UserInfo, error) {
+	publicKey, err := LoadPublicKeyFromConfig(cfg.PublicKeyPEM)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load public key: %w", err)
 	}
@@ -175,8 +176,8 @@ func ParseAccessToken(tokenStr string, cfg *config.Config) (*UserInfo, error) {
 }
 
 // ParseRefreshToken validates and parses a refresh token
-func ParseRefreshToken(tokenStr string, cfg *config.Config) (*UserInfo, error) {
-	publicKey, err := LoadPublicKeyFromConfig(cfg)
+func ParseRefreshToken(tokenStr string, cfg *JWTConfig) (*UserInfo, error) {
+	publicKey, err := LoadPublicKeyFromConfig(cfg.PublicKeyPEM)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load public key: %w", err)
 	}
@@ -209,7 +210,7 @@ func ParseRefreshToken(tokenStr string, cfg *config.Config) (*UserInfo, error) {
 }
 
 // RefreshAccessToken creates new token pair using refresh token
-func RefreshAccessToken(refreshToken string, cfg *config.Config) (*TokenPair, error) {
+func RefreshAccessToken(refreshToken string, cfg *JWTConfig) (*TokenPair, error) {
 	// Parse refresh token to get user info
 	userInfo, err := ParseRefreshToken(refreshToken, cfg)
 	if err != nil {
@@ -221,7 +222,7 @@ func RefreshAccessToken(refreshToken string, cfg *config.Config) (*TokenPair, er
 }
 
 // AuthRequired returns a Fiber middleware that checks JWT and sets user info in context
-func AuthRequired(cfg *config.Config) fiber.Handler {
+func AuthRequired(cfg *JWTConfig) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		header := c.Get("Authorization")
 		if header == "" || !strings.HasPrefix(header, "Bearer ") {

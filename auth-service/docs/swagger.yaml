@@ -1,0 +1,429 @@
+definitions:
+  dto.AuthorityResponse:
+    properties:
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      hospital_id:
+        type: integer
+      id:
+        type: integer
+      last_name:
+        type: string
+      phone:
+        type: string
+      role:
+        type: string
+      tc:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dto.CreateSubUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      role:
+        type: string
+      tc:
+        type: string
+    type: object
+  dto.ForgotPasswordRequest:
+    properties:
+      phone:
+        type: string
+    type: object
+  dto.ForgotPasswordResponse:
+    properties:
+      code:
+        type: string
+    type: object
+  dto.LoginRequest:
+    properties:
+      credential:
+        type: string
+      password:
+        type: string
+    type: object
+  dto.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+    type: object
+  dto.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  dto.RefreshTokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+    type: object
+  dto.RegisterRequest:
+    properties:
+      address:
+        type: string
+      authority_email:
+        type: string
+      authority_fname:
+        type: string
+      authority_lname:
+        type: string
+      authority_phone:
+        type: string
+      authority_tc:
+        type: string
+      city_id:
+        type: integer
+      district_id:
+        type: integer
+      hospital_email:
+        type: string
+      hospital_name:
+        type: string
+      hospital_phone:
+        type: string
+      password:
+        type: string
+      tax_number:
+        type: string
+    type: object
+  dto.ResetPasswordRequest:
+    properties:
+      code:
+        type: string
+      new_password:
+        type: string
+      phone:
+        type: string
+      repeat_new_password:
+        type: string
+    type: object
+  dto.SubUserResponse:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      phone:
+        type: string
+      role:
+        type: string
+      tc:
+        type: string
+    type: object
+  dto.UpdateSubUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      phone:
+        type: string
+      role:
+        description: '"yetkili" veya "calisan"'
+        type: string
+      tc:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /api/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Sends a reset code to the user's phone
+      parameters:
+      - description: Forgot password info
+        in: body
+        name: forgot
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ForgotPasswordResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Şifre sıfırlama kodu gönderir
+      tags:
+      - Authentication
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: User login with email or phone, returns JWT token
+      parameters:
+      - description: Login info
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Kullanıcı girişi
+      tags:
+      - Authentication
+  /api/auth/refresh-token:
+    post:
+      consumes:
+      - application/json
+      description: Geçerli bir refresh token ile yeni access ve refresh token döner
+      parameters:
+      - description: Refresh token bilgisi
+        in: body
+        name: refreshToken
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RefreshTokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: JWT yenileme
+      tags:
+      - Authentication
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers a hospital and its first authority
+      parameters:
+      - description: Register info
+        in: body
+        name: register
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.AuthorityResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Hastane ve ilk yetkili kaydı
+      tags:
+      - Authentication
+  /api/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Resets the user's password with the code
+      parameters:
+      - description: Reset password info
+        in: body
+        name: reset
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Şifreyi sıfırlar
+      tags:
+      - Authentication
+  /api/subuser:
+    get:
+      description: Lists all subusers for the hospital
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.SubUserResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Alt kullanıcıları listeler
+      tags:
+      - SubUser
+    post:
+      consumes:
+      - application/json
+      description: Adds a new subuser (yetkili/çalışan)
+      parameters:
+      - description: SubUser info
+        in: body
+        name: subuser
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateSubUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SubUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Alt kullanıcı ekler
+      tags:
+      - SubUser
+  /api/subuser/{id}:
+    delete:
+      description: Deletes a subuser
+      parameters:
+      - description: SubUser ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Alt kullanıcıyı siler
+      tags:
+      - SubUser
+    put:
+      consumes:
+      - application/json
+      description: Updates a subuser
+      parameters:
+      - description: SubUser ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: SubUser info
+        in: body
+        name: subuser
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateSubUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SubUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Alt kullanıcıyı günceller
+      tags:
+      - SubUser
+swagger: "2.0"

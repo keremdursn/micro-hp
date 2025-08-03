@@ -1,5 +1,41 @@
+bütün servisleri gözden geçirip neler yapılması lazım çıkar YAPILDI
+
+jwt ve ortak dosya düzenlemesi yap BUNU YAPIYORUM 
+
 auth dışındaki servislerin
     prometheus grafana metricleri yapılmadı onları yap
     redislerini kontrol et hepsinin
 
-jwt ve ortak dosya düzenlemesi yap
+sonra her servisin kendi db muhabbetini çöz
+
+api gateway lazım
+
+
+belki admin dashboard araştırılabilir
+
+
+gelişmiş error ve logging
+
+
+📌 Zipkin (Tracing):
+
+Servisler arası geçişleri izleme
+Latency tespiti
+OpenTelemetry + Zipkin ile Go servislere tracing ekleyebilirsin
+
+
+📌 ELK Stack (Logging):
+
+ElasticSearch, Logstash, Kibana
+JSON logları topla, filtrele, analiz et
+
+
+
+KENDİME NOTLAR:
+PERSONEL SERVİSİN DAHA METRİCS RATE LİMİT İŞLEMLERİ YAPILMADI
+
+metrics klasörünü shared a taşıdım bütün servislerde burdan ulaşçan metrics ve rate limitinge
+
+birde en önemlisi çözmemiz gereken jwt.go var bu nasıl olmalı 
+
+hospital servisinde sadece rate limitingte metricler kullanılıyor

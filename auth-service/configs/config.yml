@@ -84,3 +84,6 @@ jwt:
     -----END PUBLIC KEY-----
   access_token_expiry: "12h"
   refresh_token_expiry: "168h"
+  
+hospital_service:
+  base_url: "http://hospital-service:8081"

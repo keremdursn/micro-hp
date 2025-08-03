@@ -6,7 +6,8 @@ import (
 	"auth-service/internal/config"
 	"auth-service/internal/dto"
 	"auth-service/internal/usecase"
-	"auth-service/pkg/metrics"
+	"hospital-shared/metrics"
+	"hospital-shared/jwt"
 	"auth-service/pkg/utils"
 
 	"auth-service/pkg/middleware"
@@ -231,7 +232,8 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		})
 	}
 
-	tokenPair, err := utils.RefreshAccessToken(req.RefreshToken, h.config)
+	jwtCfg := utils.MapToSharedJWTConfig(h.config)
+	tokenPair, err := jwt.RefreshAccessToken(req.RefreshToken, jwtCfg)
 	if err != nil {
 		metrics.RefreshTokenFailCounter.Inc()
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{

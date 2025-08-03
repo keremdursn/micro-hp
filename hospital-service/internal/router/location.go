@@ -4,7 +4,7 @@ import (
 	"hospital-service/internal/handler"
 	"hospital-service/internal/repository"
 	"hospital-service/internal/usecase"
-	"hospital-service/pkg/middleware"
+	"hospital-shared/middleware"
 )
 
 func LocationRoutes(deps RouterDeps) {

@@ -4,8 +4,8 @@ import (
 	"hospital-service/internal/handler"
 	"hospital-service/internal/repository"
 	"hospital-service/internal/usecase"
-	"hospital-service/pkg/middleware"
-	"hospital-service/pkg/utils"
+	"hospital-shared/jwt"
+	"hospital-shared/middleware"
 )
 
 func HospitalRoutes(deps RouterDeps) {
@@ -17,6 +17,6 @@ func HospitalRoutes(deps RouterDeps) {
 
 	hGroup := api.Group("/hospital")
 
-	hGroup.Get("/me", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), hHandler.GetHospitalMe)
-	hGroup.Put("/me", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), hHandler.UpdateHospitalMe)
+	hGroup.Get("/me", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), hHandler.GetHospitalMe)
+	hGroup.Put("/me", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), hHandler.UpdateHospitalMe)
 }

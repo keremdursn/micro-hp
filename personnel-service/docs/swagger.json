@@ -1,0 +1,418 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/api/personnel/job-groups": {
+            "get": {
+                "description": "Returns all job groups",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Personnel"
+                ],
+                "summary": "Tüm meslek gruplarını listeler",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.JobGroupLookup"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/personnel/staff": {
+            "get": {
+                "description": "Lists staff with filters and pagination",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Personnel"
+                ],
+                "summary": "Personelleri listeler (filtreli ve sayfalı)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size",
+                        "name": "size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "First name",
+                        "name": "first_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Last name",
+                        "name": "last_name",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "TC Kimlik No",
+                        "name": "tc",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Job Group ID",
+                        "name": "job_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Title ID",
+                        "name": "title_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.StaffListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Adds a new staff member",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Personnel"
+                ],
+                "summary": "Personel ekler",
+                "parameters": [
+                    {
+                        "description": "Staff info",
+                        "name": "staff",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AddStaffRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.StaffResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/personnel/staff/{id}": {
+            "put": {
+                "description": "Updates a staff member",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Personnel"
+                ],
+                "summary": "Personel günceller",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Staff ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Staff info",
+                        "name": "staff",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateStaffRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.StaffResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Deletes a staff member",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Personnel"
+                ],
+                "summary": "Personel siler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Staff ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/personnel/titles": {
+            "get": {
+                "description": "Returns all titles for a given job group",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Personnel"
+                ],
+                "summary": "Seçili meslek grubuna ait unvanları listeler",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Job Group ID",
+                        "name": "job_group_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.TitleLookup"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.AddStaffRequest": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "hospital_polyclinic_id": {
+                    "type": "integer"
+                },
+                "job_group_id": {
+                    "type": "integer"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "tc": {
+                    "type": "string"
+                },
+                "title_id": {
+                    "type": "integer"
+                },
+                "working_days": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.JobGroupLookup": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.StaffListResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "staff": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.StaffResponse"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.StaffResponse": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "hospital_polyclinic_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "job_group_id": {
+                    "type": "integer"
+                },
+                "job_group_name": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "polyclinic_name": {
+                    "type": "string"
+                },
+                "tc": {
+                    "type": "string"
+                },
+                "title_id": {
+                    "type": "integer"
+                },
+                "title_name": {
+                    "type": "string"
+                },
+                "working_days": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TitleLookup": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UpdateStaffRequest": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "hospital_polyclinic_id": {
+                    "type": "integer"
+                },
+                "job_group_id": {
+                    "type": "integer"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "tc": {
+                    "type": "string"
+                },
+                "title_id": {
+                    "type": "integer"
+                },
+                "working_days": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

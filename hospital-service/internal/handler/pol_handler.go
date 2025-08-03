@@ -6,8 +6,7 @@ import (
 	"hospital-service/internal/config"
 	"hospital-service/internal/dto"
 	"hospital-service/internal/usecase"
-
-	"hospital-service/pkg/utils"
+	"hospital-shared/jwt"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -56,7 +55,7 @@ func (h *PolyclinicHandler) AddHospitalPolyclinic(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -83,7 +82,7 @@ func (h *PolyclinicHandler) ListHospitalPolyclinic(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	size, _ := strconv.Atoi(c.Query("size", "10"))
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}
@@ -111,7 +110,7 @@ func (h *PolyclinicHandler) RemoveHospitalPolyclinic(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid id"})
 	}
 
-	user := utils.GetUserInfo(c)
+	user := jwt.GetUserInfo(c)
 	if user == nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
 	}

@@ -2,14 +2,16 @@ package router
 
 import (
 	"auth-service/internal/handler"
+	"auth-service/internal/infrastructure/client"
 	"auth-service/internal/repository"
 	"auth-service/internal/usecase"
-	"auth-service/pkg/middleware"
+	"hospital-shared/middleware"
 )
 
 func AuthRoutes(deps RouterDeps) {
 	authRepo := repository.NewAuthRepository(deps.DB.SQL)
-	authUsecase := usecase.NewAuthUsecase(authRepo, deps.DB.Redis)
+	hospitalClient := client.NewHospitalClient(deps.Config.Url.BaseUrl)
+	authUsecase := usecase.NewAuthUsecase(authRepo, deps.DB.Redis, hospitalClient)
 	authHandler := handler.NewAuthHandler(authUsecase, deps.Config)
 
 	api := deps.App.Group("/api")

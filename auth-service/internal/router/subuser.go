@@ -4,8 +4,8 @@ import (
 	"auth-service/internal/handler"
 	"auth-service/internal/repository"
 	"auth-service/internal/usecase"
-	"auth-service/pkg/middleware"
-	"auth-service/pkg/utils"
+	"hospital-shared/middleware"
+	"hospital-shared/jwt"
 )
 
 func SubUserRoutes(deps RouterDeps) {
@@ -18,8 +18,8 @@ func SubUserRoutes(deps RouterDeps) {
 
 	subuserGroup := api.Group("/subuser")
 
-	subuserGroup.Post("/", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), subuserHandler.CreateSubUser)
-	subuserGroup.Get("/users", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), subuserHandler.ListUsers)
-	subuserGroup.Put("/:id", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), subuserHandler.UpdateSubUser)
-	subuserGroup.Delete("/:id", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), subuserHandler.DeleteSubUser)
+	subuserGroup.Post("/", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), subuserHandler.CreateSubUser)
+	subuserGroup.Get("/users", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), subuserHandler.ListUsers)
+	subuserGroup.Put("/:id", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), subuserHandler.UpdateSubUser)
+	subuserGroup.Delete("/:id", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), subuserHandler.DeleteSubUser)
 }

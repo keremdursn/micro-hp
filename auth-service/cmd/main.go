@@ -7,14 +7,15 @@ import (
 	"auth-service/internal/config"
 	"auth-service/internal/database"
 	"auth-service/internal/router"
+	"auth-service/pkg/utils"
 
 	"github.com/gofiber/fiber/v2"
 
-	// _ "auth-service/docs"
+	_ "auth-service/docs"
 
-	// fiberSwagger "github.com/swaggo/fiber-swagger"
+	fiberSwagger "github.com/swaggo/fiber-swagger"
 
-	"auth-service/pkg/metrics"
+	"hospital-shared/metrics"
 )
 
 func main() {
@@ -35,21 +36,18 @@ func main() {
 		log.Fatalf("migration failed: %v", err)
 	}
 
-	if err != nil {
-		log.Fatal("cannot migrate database: ", err)
-	}
-
 	app := fiber.New()
 
 	app.Use(metrics.PrometheusMiddleware())
 	app.Get("/metrics", metrics.PrometheusHandler())
 
-	// app.Get("/swagger/*", fiberSwagger.WrapHandler)
+	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	deps := router.RouterDeps{
-		App:    app,
-		DB:     dbInstance,
-		Config: &cfg,
+		App:             app,
+		DB:              dbInstance,
+		Config:          &cfg,
+		JWTSharedConfig: utils.MapToSharedJWTConfig(&cfg),
 	}
 
 	router.AuthRoutes(deps)

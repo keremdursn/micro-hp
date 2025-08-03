@@ -1,13 +1,13 @@
 package router
 
 import (
+	"hospital-shared/jwt"
 	"personnel-service/internal/handler"
+	"personnel-service/internal/infrastructure/client"
 	"personnel-service/internal/repository"
 	"personnel-service/internal/usecase"
-	"personnel-service/pkg/utils"
-	"personnel-service/internal/infrastructure/client"
 
-	"personnel-service/pkg/middleware"
+	"hospital-shared/middleware"
 )
 
 func PersonnelRoutes(deps RouterDeps) {
@@ -20,16 +20,16 @@ func PersonnelRoutes(deps RouterDeps) {
 
 	personnelGroup := api.Group("/personnel")
 
-	personnelGroup.Get("/job-groups", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.ListAllJobGroups)
-	personnelGroup.Get("/titles/:job_group_id", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.ListTitleByJobGroup)
+	personnelGroup.Get("/job-groups", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), personnelHandler.ListAllJobGroups)
+	personnelGroup.Get("/titles/:job_group_id", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), personnelHandler.ListTitleByJobGroup)
 
-	personnelGroup.Post("/staff", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), personnelHandler.AddStaff)
-	personnelGroup.Put("/staff/:id", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), personnelHandler.UpdateStaff)
-	personnelGroup.Delete("/staff/:id", middleware.AdminRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili"), personnelHandler.DeleteStaff)
-	personnelGroup.Get("/staff", middleware.GeneralRateLimiter(), utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.ListStaff)
+	personnelGroup.Post("/staff", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), personnelHandler.AddStaff)
+	personnelGroup.Put("/staff/:id", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), personnelHandler.UpdateStaff)
+	personnelGroup.Delete("/staff/:id", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), personnelHandler.DeleteStaff)
+	personnelGroup.Get("/staff", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), personnelHandler.ListStaff)
 
 	//Hospital servisi bu endpointlere http istekleri atıyor
-	personnelGroup.Get("/:id", utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.GetStaffCount)
-	personnelGroup.Get("/groups/:id", utils.AuthRequired(deps.Config), utils.RequireRole("yetkili", "calisan"), personnelHandler.GetGroupCounts)
+	personnelGroup.Get("/:id", jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), personnelHandler.GetStaffCount)
+	personnelGroup.Get("/groups/:id", jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), personnelHandler.GetGroupCounts)
 
 }

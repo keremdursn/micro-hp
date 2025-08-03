@@ -11,6 +11,7 @@ type Config struct {
 	Database DatabaseConfig
 	Redis    RedisConfig
 	JWT      JWTConfig
+	Url      HospitalService
 }
 
 type ServerConfig struct {
@@ -37,6 +38,10 @@ type JWTConfig struct {
 	PublicKey          string `mapstructure:"public_key"`
 	AccessTokenExpiry  string `mapstructure:"access_token_expiry"`
 	RefreshTokenExpiry string `mapstructure:"refresh_token_expiry"`
+}
+
+type HospitalService struct {
+	BaseUrl string `mapstructure:"baseUrl"`
 }
 
 func LoadConfig(path string) (config Config, err error) {
