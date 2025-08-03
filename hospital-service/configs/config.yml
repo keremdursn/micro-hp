@@ -2,7 +2,7 @@ server:
   port: "8082"
 
 database:
-  host: "postgres"
+  host: "hospital-db"
   port: "5432"
   user: "user"
   password: "password"
@@ -85,5 +85,5 @@ jwt:
   access_token_expiry: "12h"
   refresh_token_expiry: "168h"
 
-personnelService:
-  baseUrl: "http://personnel-service:8083"
+personnel_service:
+  base_url: "http://personnel-service:8083"

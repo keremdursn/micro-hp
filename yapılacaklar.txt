@@ -1,12 +1,14 @@
 bütün servisleri gözden geçirip neler yapılması lazım çıkar YAPILDI
 
-jwt ve ortak dosya düzenlemesi yap BUNU YAPIYORUM 
+jwt ve ortak dosya düzenlemesi yap BUNU YAPIYORUM BAKALIM TEST EDECÜK
+
+sonra her servisin kendi db muhabbetini çöz
 
 auth dışındaki servislerin
     prometheus grafana metricleri yapılmadı onları yap
     redislerini kontrol et hepsinin
 
-sonra her servisin kendi db muhabbetini çöz
+
 
 api gateway lazım
 

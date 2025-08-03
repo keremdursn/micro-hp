@@ -79,4 +79,4 @@ require (
 	hospital-shared v0.0.0
 )
 
-replace hospital-shared => ../hospital-shared
+replace hospital-shared => ./hospital-shared

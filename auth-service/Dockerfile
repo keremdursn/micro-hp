@@ -3,11 +3,14 @@ FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
-COPY go.mod ./
-COPY go.sum ./
+# Shared modül dahil olsun diye bu şekilde yapıyoruz
+COPY auth-service/go.mod ./go.mod
+COPY auth-service/go.sum ./go.sum
+COPY hospital-shared ./hospital-shared
+
 RUN go mod download
 
-COPY . .
+COPY auth-service/. .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /main cmd/main.go
 

@@ -49,11 +49,6 @@ func (h *HospitalHandler) CreateHospital(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot parse JSON"})
 	}
 
-	user := jwt.GetUserInfo(c)
-	if user == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
-	}
-
 	resp, err := h.hospitalUsecase.CreateHospital(&req)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})

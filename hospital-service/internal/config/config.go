@@ -11,7 +11,7 @@ type Config struct {
 	Database DatabaseConfig
 	Redis    RedisConfig
 	JWT      JWTConfig
-	Url      PersonnelService
+	Url      PersonnelService `mapstructure:"personnel_service"`
 }
 
 type ServerConfig struct {
@@ -41,7 +41,7 @@ type JWTConfig struct {
 }
 
 type PersonnelService struct {
-	BaseUrl string `mapstructure:"baseUrl"`
+	BaseUrl string `mapstructure:"base_url"`
 }
 
 func LoadConfig(path string) (config Config, err error) {

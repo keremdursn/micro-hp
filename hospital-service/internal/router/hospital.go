@@ -17,6 +17,9 @@ func HospitalRoutes(deps RouterDeps) {
 
 	hGroup := api.Group("/hospital")
 
+	// Mikroservis arası iletişim için - auth service'den hastane oluşturma
+	hGroup.Post("/", hHandler.CreateHospital)
+
 	hGroup.Get("/me", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), hHandler.GetHospitalMe)
 	hGroup.Put("/me", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), hHandler.UpdateHospitalMe)
 }

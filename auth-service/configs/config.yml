@@ -2,7 +2,7 @@ server:
   port: "8081"
 
 database:
-  host: "postgres"
+  host: "auth-db"
   port: "5432"
   user: "user"
   password: "password"
@@ -86,4 +86,4 @@ jwt:
   refresh_token_expiry: "168h"
   
 hospital_service:
-  base_url: "http://hospital-service:8081"
+  base_url: "http://hospital-service:8082"

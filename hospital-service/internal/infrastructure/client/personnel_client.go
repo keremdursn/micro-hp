@@ -29,7 +29,7 @@ func NewPersonnelClient(baseURL string) PersonnelClient {
 }
 
 func (c *personnelClient) GetPersonnelCount(hpID uint) (int, error) {
-	url := fmt.Sprintf("%s/staff/count?hospitalPolyclinicID=%d", c.baseURL, hpID)
+	url := fmt.Sprintf("%s/api/personnel/%d", c.baseURL, hpID)
 
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
@@ -52,7 +52,7 @@ func (c *personnelClient) GetPersonnelCount(hpID uint) (int, error) {
 }
 
 func (c *personnelClient) GetPersonnelGroups(hpID uint) ([]dt.PolyclinicPersonnelGroup, error) {
-	url := fmt.Sprintf("%s/staff/groups?hospitalPolyclinicID=%d", c.baseURL, hpID)
+	url := fmt.Sprintf("%s/api/personnel/groups/%d", c.baseURL, hpID)
 
 	resp, err := c.httpClient.Get(url)
 	if err != nil {

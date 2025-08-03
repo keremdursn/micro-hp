@@ -25,6 +25,6 @@ func PolyclinicRoutes(deps RouterDeps) {
 	polyclinicGroup.Get("/hospital-polyclinics", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), polyclinicHandler.ListHospitalPolyclinic)
 	polyclinicGroup.Delete("/hospital-polyclinics/:id", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), polyclinicHandler.RemoveHospitalPolyclinic)
 
-	//Personnel servisi bu endpointe http isteği atıyor
-	polyclinicGroup.Get("/hospital-polyclinics/:id", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), polyclinicHandler.GetHospitalPolyclinic)
+	// Mikroservis arası iletişim için JWT gerektirmeyen endpoint - Personnel servisi bu endpointe http isteği atıyor
+	polyclinicGroup.Get("/hospital-polyclinics/:id", polyclinicHandler.GetHospitalPolyclinic)
 }

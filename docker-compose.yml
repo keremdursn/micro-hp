@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   auth-service:
     build:
-      context: ./auth-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: auth-service/Dockerfile
     ports:
       - "8081:8081"
     volumes:
@@ -13,7 +11,7 @@ services:
       - auth-db
     networks:
       - app-network
-  
+
   auth-db:
     image: postgres:14
     environment:
@@ -26,12 +24,11 @@ services:
       - auth_postgres_data:/var/lib/postgresql/data
     networks:
       - app-network
-  
 
   hospital-service:
     build:
-      context: ./hospital-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: hospital-service/Dockerfile
     ports:
       - "8082:8082"
     volumes:
@@ -54,12 +51,10 @@ services:
     networks:
       - app-network
 
-
-
   personnel-service:
     build:
-      context: ./personnel-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: personnel-service/Dockerfile
     ports:
       - "8083:8083"
     volumes:
@@ -68,8 +63,6 @@ services:
       - personnel-db
     networks:
       - app-network
-  
-
 
   personnel-db:
     image: postgres:14
@@ -86,7 +79,7 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
+    container_name: prometheuss
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     command:
@@ -96,10 +89,13 @@ services:
     networks:
       - app-network
     depends_on:
+      - auth-service
+      - hospital-service
+      - personnel-service
 
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
+    container_name: grafanaa
     ports:
       - "3000:3000"
     networks:
@@ -107,11 +103,22 @@ services:
     depends_on:
       - prometheus
 
+  redis:
+    image: redis:6.2
+    container_name: redis_cach
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
 volumes:
   auth_postgres_data:
   hospital_postgres_data:
   personnel_postgres_data:
   redis_data:
+
 
 networks:
   app-network:

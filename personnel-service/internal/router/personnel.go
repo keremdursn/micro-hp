@@ -28,8 +28,8 @@ func PersonnelRoutes(deps RouterDeps) {
 	personnelGroup.Delete("/staff/:id", middleware.AdminRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili"), personnelHandler.DeleteStaff)
 	personnelGroup.Get("/staff", middleware.GeneralRateLimiter(), jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), personnelHandler.ListStaff)
 
-	//Hospital servisi bu endpointlere http istekleri atıyor
-	personnelGroup.Get("/:id", jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), personnelHandler.GetStaffCount)
-	personnelGroup.Get("/groups/:id", jwt.AuthRequired(deps.JWTSharedConfig), jwt.RequireRole("yetkili", "calisan"), personnelHandler.GetGroupCounts)
+	//Hospital servisi bu endpointlere http istekleri atıyor - JWT gerektirmez (mikroservis arası iletişim)
+	personnelGroup.Get("/:id", personnelHandler.GetStaffCount)
+	personnelGroup.Get("/groups/:id", personnelHandler.GetGroupCounts)
 
 }
