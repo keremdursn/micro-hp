@@ -1,12 +1,7 @@
 
-
 auth dışındaki servislerin
     prometheus grafana metricleri yapılmadı onları yap
-    redislerini kontrol et hepsinin
 
-
-
-api gateway lazım
 
 
 belki admin dashboard araştırılabilir
@@ -28,5 +23,3 @@ ElasticSearch, Logstash, Kibana
 JSON logları topla, filtrele, analiz et
 
 
-
-KENDİME NOTLAR:
