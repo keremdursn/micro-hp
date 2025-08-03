@@ -1,8 +1,4 @@
-bütün servisleri gözden geçirip neler yapılması lazım çıkar YAPILDI
 
-jwt ve ortak dosya düzenlemesi yap BUNU YAPIYORUM BAKALIM TEST EDECÜK
-
-sonra her servisin kendi db muhabbetini çöz
 
 auth dışındaki servislerin
     prometheus grafana metricleri yapılmadı onları yap
@@ -34,10 +30,3 @@ JSON logları topla, filtrele, analiz et
 
 
 KENDİME NOTLAR:
-PERSONEL SERVİSİN DAHA METRİCS RATE LİMİT İŞLEMLERİ YAPILMADI
-
-metrics klasörünü shared a taşıdım bütün servislerde burdan ulaşçan metrics ve rate limitinge
-
-birde en önemlisi çözmemiz gereken jwt.go var bu nasıl olmalı 
-
-hospital servisinde sadece rate limitingte metricler kullanılıyor
