@@ -4,14 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	dt "hospital-shared/dto"
+	"hospital-shared/logging"
+	"hospital-shared/tracing"
 	"personnel-service/internal/dto"
 	"personnel-service/internal/infrastructure/client"
 	"personnel-service/internal/models"
 	"personnel-service/internal/repository"
 
 	"github.com/go-redis/redis/v8"
+	"go.uber.org/zap"
 )
 
 type PersonnelUsecase interface {
@@ -43,6 +47,18 @@ func NewPersonnelUsecase(repo repository.PersonnelRepository, redis *redis.Clien
 
 func (u *personnelUsecase) ListAllJobGroups() ([]dto.JobGroupLookup, error) {
 	ctx := context.Background()
+
+	// Start tracing span for job groups listing
+	span, ctx := tracing.StartServiceSpan(ctx, "personnel-service", "list-job-groups")
+	defer func() {
+		if span != nil {
+			span.Finish()
+		}
+	}()
+
+	// Log operation
+	logging.GlobalLogger.LogInfo(ctx, "Listing all job groups")
+
 	cacheKey := "job_groups"
 
 	// Önce Redis'te var mı bak
@@ -50,13 +66,24 @@ func (u *personnelUsecase) ListAllJobGroups() ([]dto.JobGroupLookup, error) {
 	if err == nil && cached != "" {
 		var resp []dto.JobGroupLookup
 		if err := json.Unmarshal([]byte(cached), &resp); err == nil {
+			logging.GlobalLogger.LogInfo(ctx, "Job groups retrieved from cache",
+				zap.Int("count", len(resp)),
+			)
 			return resp, nil
 		}
 	}
 
 	// 2. Yoksa DB'den çek
+	dbSpan, dbCtx := tracing.StartDatabaseSpan(ctx, "SELECT", "job_groups")
+	start := time.Now()
 	groups, err := u.repo.GetAllJobGroups()
+	duration := time.Since(start)
+	tracing.FinishSpanWithError(dbSpan, err)
+	logging.GlobalLogger.LogDatabaseOperation(dbCtx, "SELECT", "job_groups", duration, err)
+
 	if err != nil {
+		tracing.FinishSpanWithError(span, err)
+		logging.GlobalLogger.LogError(ctx, err, "Failed to get job groups from database")
 		return nil, err
 	}
 
@@ -72,6 +99,11 @@ func (u *personnelUsecase) ListAllJobGroups() ([]dto.JobGroupLookup, error) {
 	if data, err := json.Marshal(resp); err == nil {
 		_ = u.redis.Set(ctx, cacheKey, data, 0).Err() // Hata olursa cache'siz devam et
 	}
+
+	logging.GlobalLogger.LogInfo(ctx, "Job groups listed successfully",
+		zap.Int("count", len(resp)),
+	)
+
 	return resp, nil
 }
 
@@ -346,9 +378,77 @@ func (u *personnelUsecase) ListStaff(hospitalID uint, filter dto.StaffListFilter
 }
 
 func (u *personnelUsecase) CountPersonnelByHpID(hpID uint) (int64, error) {
-	return u.repo.CountPersonnel(hpID)
+	ctx := context.Background()
+
+	// Start tracing span for personnel count
+	span, ctx := tracing.StartServiceSpan(ctx, "personnel-service", "count-personnel")
+	defer func() {
+		if span != nil {
+			span.Finish()
+		}
+	}()
+
+	// Log operation
+	logging.GlobalLogger.LogInfo(ctx, "Counting personnel by hospital polyclinic ID",
+		zap.Uint("hp_id", hpID),
+	)
+
+	// Database operation with tracing
+	dbSpan, dbCtx := tracing.StartDatabaseSpan(ctx, "SELECT", "staff")
+	start := time.Now()
+	count, err := u.repo.CountPersonnel(hpID)
+	duration := time.Since(start)
+	tracing.FinishSpanWithError(dbSpan, err)
+	logging.GlobalLogger.LogDatabaseOperation(dbCtx, "SELECT", "staff", duration, err)
+
+	if err != nil {
+		tracing.FinishSpanWithError(span, err)
+		logging.GlobalLogger.LogError(ctx, err, "Failed to count personnel")
+		return 0, err
+	}
+
+	logging.GlobalLogger.LogInfo(ctx, "Personnel counted successfully",
+		zap.Uint("hp_id", hpID),
+		zap.Int64("count", count),
+	)
+
+	return count, nil
 }
 
 func (u *personnelUsecase) GetGroupCountsByHpID(hpID uint) ([]dt.PolyclinicPersonnelGroup, error) {
-	return u.repo.GetGroupCountsByHospitalPolyclinicID(hpID)
+	ctx := context.Background()
+
+	// Start tracing span for group counts
+	span, ctx := tracing.StartServiceSpan(ctx, "personnel-service", "get-group-counts")
+	defer func() {
+		if span != nil {
+			span.Finish()
+		}
+	}()
+
+	// Log operation
+	logging.GlobalLogger.LogInfo(ctx, "Getting personnel group counts",
+		zap.Uint("hp_id", hpID),
+	)
+
+	// Database operation with tracing
+	dbSpan, dbCtx := tracing.StartDatabaseSpan(ctx, "SELECT", "staff")
+	start := time.Now()
+	groups, err := u.repo.GetGroupCountsByHospitalPolyclinicID(hpID)
+	duration := time.Since(start)
+	tracing.FinishSpanWithError(dbSpan, err)
+	logging.GlobalLogger.LogDatabaseOperation(dbCtx, "SELECT", "staff", duration, err)
+
+	if err != nil {
+		tracing.FinishSpanWithError(span, err)
+		logging.GlobalLogger.LogError(ctx, err, "Failed to get group counts")
+		return nil, err
+	}
+
+	logging.GlobalLogger.LogInfo(ctx, "Personnel group counts retrieved successfully",
+		zap.Uint("hp_id", hpID),
+		zap.Int("group_count", len(groups)),
+	)
+
+	return groups, nil
 }

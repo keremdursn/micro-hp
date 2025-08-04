@@ -3,10 +3,6 @@ auth dışındaki servislerin
     prometheus grafana metricleri yapılmadı onları yap
 
 
-
-belki admin dashboard araştırılabilir
-
-
 gelişmiş error ve logging
 
 
@@ -15,6 +11,14 @@ gelişmiş error ve logging
 Servisler arası geçişleri izleme
 Latency tespiti
 OpenTelemetry + Zipkin ile Go servislere tracing ekleyebilirsin
+
+Senin projende:
+
+Tracing için Zipkin veya OpenTelemetry + Grafana Tempo düşünebilirsin.
+
+Logging için Loki + Promtail + Grafana şu anda en hızlı kurulabilecek ve yeterli olan yapı.
+
+İleride büyük projeye geçersen ELK’yi ekleyebilirsin.
 
 
 📌 ELK Stack (Logging):

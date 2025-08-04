@@ -6,14 +6,16 @@ import (
 	"auth-service/internal/config"
 	"auth-service/internal/dto"
 	"auth-service/internal/usecase"
-	"hospital-shared/metrics"
-	"hospital-shared/jwt"
 	"auth-service/pkg/utils"
+	"hospital-shared/jwt"
+	"hospital-shared/logging"
+	"hospital-shared/metrics"
 
 	"auth-service/pkg/middleware"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"go.uber.org/zap"
 )
 
 type AuthHandler struct {
@@ -89,13 +91,43 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
+	// Log registration attempt
+	logging.GlobalLogger.LogInfo(
+		c.UserContext(),
+		"Registration attempt",
+		zap.String("hospital_name", req.HospitalName),
+		zap.String("authority_email", req.AuthorityEmail),
+		zap.String("hospital_email", req.HospitalEmail),
+	)
+
 	authority, err := h.authUsecase.Register(&req)
 	if err != nil {
 		metrics.RegisterFailCounter.Inc()
+
+		// Log registration failure
+		logging.GlobalLogger.LogError(
+			c.UserContext(),
+			err,
+			"Registration failed",
+			zap.String("hospital_name", req.HospitalName),
+			zap.String("authority_email", req.AuthorityEmail),
+		)
+
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
+
+	// Log successful registration
+	logging.GlobalLogger.LogInfo(
+		c.UserContext(),
+		"Registration successful",
+		zap.String("hospital_name", req.HospitalName),
+		zap.String("authority_email", req.AuthorityEmail),
+		zap.Uint("authority_id", authority.ID),
+		zap.Uint("hospital_id", authority.HospitalID),
+	)
+
 	metrics.RegisterSuccessCounter.Inc()
 
 	var deletedAt *time.Time

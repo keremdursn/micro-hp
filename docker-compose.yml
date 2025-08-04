@@ -143,6 +143,9 @@ services:
       - "8081:8081"
     volumes:
       - ./auth-service:/app
+    labels:
+      - "logging=promtail"
+      - "service=auth-service"
     depends_on:
       - auth-db
     networks:
@@ -169,6 +172,9 @@ services:
       - "8082:8082"
     volumes:
       - ./hospital-service:/app
+    labels:
+      - "logging=promtail"
+      - "service=hospital-service"
     depends_on:
       - hospital-db
     networks:
@@ -195,6 +201,9 @@ services:
       - "8083:8083"
     volumes:
       - ./personnel-service:/app
+    labels:
+      - "logging=promtail"
+      - "service=personnel-service"
     depends_on:
       - personnel-db
     networks:
@@ -234,10 +243,19 @@ services:
     container_name: grafanaa
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./monitoring/grafana-dashboard-microservices.json:/var/lib/grafana/dashboards/microservices.json
     networks:
       - app-network
     depends_on:
       - prometheus
+      - loki
+      - zipkin
 
   redis:
     image: redis:6.2
@@ -249,6 +267,42 @@ services:
     networks:
       - app-network
 
+  # Observability Stack
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    networks:
+      - app-network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./monitoring/promtail-config-simple.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - app-network
+    depends_on:
+      - loki
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    environment:
+      - STORAGE_TYPE=mem
+    networks:
+      - app-network
+
 volumes:
   auth_postgres_data:
   hospital_postgres_data:
@@ -256,6 +310,8 @@ volumes:
   redis_data:
   kong_data:
   konga_data:
+  loki_data:
+  grafana_data:
 
 
 networks:

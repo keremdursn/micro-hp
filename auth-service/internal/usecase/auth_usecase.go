@@ -13,8 +13,11 @@ import (
 	"auth-service/pkg/utils"
 	dt "hospital-shared/dto"
 	"hospital-shared/jwt"
+	"hospital-shared/logging"
+	"hospital-shared/tracing"
 
 	"github.com/go-redis/redis/v8"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -40,17 +43,49 @@ func NewAuthUsecase(r repository.AuthRepository, redis *redis.Client, hc client.
 }
 
 func (u *authUsecase) Register(req *dto.RegisterRequest) (*models.Authority, error) {
+	ctx := context.Background()
+
+	// Start tracing span for registration process
+	span, ctx := tracing.StartServiceSpan(ctx, "auth-service", "register")
+	defer func() {
+		if span != nil {
+			span.Finish()
+		}
+	}()
+
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
+		tracing.FinishSpanWithError(span, err)
+		logging.GlobalLogger.LogError(ctx, err, "Password hashing failed")
 		return nil, err
 	}
 
-	// Check uniqueness
-	if exists, _ := u.authRepo.IsAuthorityExists(req.AuthorityTC, req.AuthorityEmail, req.AuthorityPhone); exists {
-		return nil, errors.New("authority already exists")
+	// Check uniqueness with database tracing
+	dbSpan, dbCtx := tracing.StartDatabaseSpan(ctx, "SELECT", "authorities")
+	exists, err := u.authRepo.IsAuthorityExists(req.AuthorityTC, req.AuthorityEmail, req.AuthorityPhone)
+	if err != nil {
+		tracing.FinishSpanWithError(dbSpan, err)
+		logging.GlobalLogger.LogDatabaseOperation(dbCtx, "SELECT", "authorities", 0, err)
+		return nil, err
+	}
+	if dbSpan != nil {
+		dbSpan.Finish()
+	}
+	logging.GlobalLogger.LogDatabaseOperation(dbCtx, "SELECT", "authorities", 0, nil)
+
+	if exists {
+		err := errors.New("authority already exists")
+		tracing.FinishSpanWithError(span, err)
+		logging.GlobalLogger.LogInfo(ctx, "Registration failed - authority exists",
+			zap.String("tc", req.AuthorityTC),
+			zap.String("email", req.AuthorityEmail),
+		)
+		return nil, err
 	}
 
-	// Call hospital service to create hospital
+	// Call hospital service to create hospital with service tracing
+	serviceSpan, serviceCtx := tracing.StartHTTPSpan(ctx, "create-hospital", "POST", "/api/hospital")
+	start := time.Now()
 	hospitalResp, err := u.hospitalClient.CreateHospital(&dt.CreateHospitalRequest{
 		Name:       req.HospitalName,
 		TaxNumber:  req.TaxNumber,
@@ -60,11 +95,20 @@ func (u *authUsecase) Register(req *dto.RegisterRequest) (*models.Authority, err
 		CityID:     req.CityID,
 		DistrictID: req.DistrictID,
 	})
+	duration := time.Since(start)
+
 	if err != nil {
+		tracing.FinishSpanWithError(serviceSpan, err)
+		logging.GlobalLogger.LogServiceCall(serviceCtx, "hospital-service", "/api/hospital", 0, duration, err)
 		return nil, err
 	}
+	if serviceSpan != nil {
+		serviceSpan.Finish()
+	}
+	logging.GlobalLogger.LogServiceCall(serviceCtx, "hospital-service", "/api/hospital", 201, duration, nil)
 
-	// Create Authority
+	// Create Authority with database tracing
+	dbSpan2, dbCtx2 := tracing.StartDatabaseSpan(ctx, "INSERT", "authorities")
 	authority := &models.Authority{
 		FirstName:  req.AuthorityFName,
 		LastName:   req.AuthorityLName,
@@ -75,9 +119,25 @@ func (u *authUsecase) Register(req *dto.RegisterRequest) (*models.Authority, err
 		Role:       "yetkili",
 		HospitalID: hospitalResp.ID,
 	}
-	if err := u.authRepo.CreateAuthority(authority); err != nil {
+
+	start2 := time.Now()
+	err = u.authRepo.CreateAuthority(authority)
+	duration2 := time.Since(start2)
+
+	if err != nil {
+		tracing.FinishSpanWithError(dbSpan2, err)
+		logging.GlobalLogger.LogDatabaseOperation(dbCtx2, "INSERT", "authorities", duration2, err)
 		return nil, err
 	}
+	if dbSpan2 != nil {
+		dbSpan2.Finish()
+	}
+	logging.GlobalLogger.LogDatabaseOperation(dbCtx2, "INSERT", "authorities", duration2, nil)
+
+	logging.GlobalLogger.LogInfo(ctx, "Registration completed successfully",
+		zap.Uint("authority_id", authority.ID),
+		zap.Uint("hospital_id", authority.HospitalID),
+	)
 
 	return authority, nil
 }
